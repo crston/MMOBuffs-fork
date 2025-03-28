@@ -18,38 +18,16 @@ import java.util.logging.Level;
 public class StatManager {
     private final MMOBuffs plugin;
     private final Map<String, StatHandler<?>> handlers = new LinkedHashMap<>();
-    private String defaultStatHandlerKey;
-    private StatHandler<?> defaultStatHandler;
 
     public StatManager(MMOBuffs plugin) {
         this.plugin = plugin;
-        loadDefaultStatHandler();
-        registerStatHandlers();
-    }
-
-    private void loadDefaultStatHandler() {
-        this.defaultStatHandlerKey = plugin.getConfig().getString("stat-handler.default", "mythiclib");
-        this.defaultStatHandler = handlers.get(defaultStatHandlerKey);
-
-        if (defaultStatHandler == null) {
-            plugin.getLogger().log(Level.WARNING, "Default stat handler '" + defaultStatHandlerKey + "' not found. Using MythicLib if available.");
-            defaultStatHandlerKey = "mythiclib";
-            defaultStatHandler = handlers.get(defaultStatHandlerKey);
-        }
-
-        if (defaultStatHandler == null) {
-            plugin.getLogger().log(Level.SEVERE, "No stat handlers available! Stats will not function.");
-        }
-    }
-
-    private void registerStatHandlers() {
-        if (Bukkit.getPluginManager().isPluginEnabled("MythicLib"))
+        if (Bukkit.getPluginManager().getPlugin("MythicLib") != null)
             register(new MythicLibStatHandler());
 
-        if (Bukkit.getPluginManager().isPluginEnabled("AureliumSkills"))
+        if (Bukkit.getPluginManager().getPlugin("AureliumSkills") != null)
             register(new AureliumSkillsStatHandler());
 
-        if (Bukkit.getPluginManager().isPluginEnabled("MythicMobs"))
+        if (Bukkit.getPluginManager().getPlugin("MythicMobs") != null)
             register(new MythicMobsStatHandler());
     }
 
@@ -59,55 +37,29 @@ public class StatManager {
     }
 
     public void add(EffectHolder holder, ActiveStatusEffect effect) {
-        if (holder == null) return;
-
-        for (Map.Entry<StatKey, StatValue> entry : effect.getStatusEffect().getStats().entrySet()) {
-            StatHandler<?> handler = getHandler(entry.getKey());
-            if (handler != null) {
-                handler.add(holder, effect, entry.getKey(), entry.getValue());
+        if (holder != null) {
+            for (Map.Entry<StatKey, StatValue> entry : effect.getStatusEffect().getStats().entrySet()) {
+                getHandler(entry.getKey()).add(holder, effect, entry.getKey(), entry.getValue());
             }
         }
     }
 
     public void remove(EffectHolder holder, ActiveStatusEffect effect) {
-        if (holder == null) return;
-
-        for (StatKey key : effect.getStatusEffect().getStats().keySet()) {
-            StatHandler<?> handler = getHandler(key);
-            if (handler != null) {
-                handler.remove(holder, key);
+        if (holder != null) {
+            for (StatKey key : effect.getStatusEffect().getStats().keySet()) {
+                getHandler(key).remove(holder, key);
             }
         }
     }
 
     public String getValue(EffectHolder holder, StatKey key) {
-        if (holder == null || key == null) return "0";
-
-        StatHandler<?> handler = getHandler(key);
-        if (handler != null) {
-            return handler.getValue(holder, key);
+        if (holder != null && key != null) {
+            return getHandler(key).getValue(holder, key);
         }
         return "0";
     }
 
     private StatHandler<?> getHandler(StatKey key) {
-        String handlerKey = (key.getPlugin() != null) ? key.getPlugin() : defaultStatHandlerKey;
-        StatHandler<?> handler = handlers.get(handlerKey);
-
-        if (handler == null) {
-            MMOBuffs.getInst().getLogger().warning("Stat handler '" + handlerKey + "' not found. Using default.");
-            handler = defaultStatHandler;
-        }
-
-        if (handler == null) {
-            MMOBuffs.getInst().getLogger().severe("No stat handler available for key: " + key);
-            return null;
-        }
-
-        return handler;
-    }
-
-    public void reload() {
-        loadDefaultStatHandler();
+        return handlers.get((key.getPlugin() != null) ? key.getPlugin() : plugin.getConfig().getString("stat-handler.default", "mythiclib"));
     }
 }

@@ -4,15 +4,12 @@ import com.ehhthan.mmobuffs.MMOBuffs;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.logging.Level;
 
 @SuppressWarnings("ALL")
 public final class ConfigManager {
     private final MMOBuffs plugin;
-    private final String defaultResourcePath = "default/"; // Make configurable if needed
 
     public ConfigManager(MMOBuffs plugin) {
         this.plugin = plugin;
@@ -27,7 +24,7 @@ public final class ConfigManager {
         File folder = new File(plugin.getDataFolder() + "/" + path);
         if (!folder.exists())
             if (!folder.mkdir())
-                plugin.getLogger().log(Level.WARNING, "Could not create directory: " + folder.getAbsolutePath());
+                plugin.getLogger().log(Level.WARNING, "Could not create directory.");
     }
 
     /*
@@ -52,19 +49,12 @@ public final class ConfigManager {
 
         public void checkFile() {
             File file = getFile();
-            if (!file.exists()) {
-                try (InputStream resource = plugin.getResource(plugin.getConfig().getString("defaultResourcePath", "default/") + resourceName)) { // Use configurable path
-                    if (resource != null) {
-                        Path filePath = file.getAbsoluteFile().toPath();
-                        Files.copy(resource, filePath);
-                        plugin.getLogger().log(Level.INFO, "Created default file: " + file.getAbsolutePath());
-                    } else {
-                        plugin.getLogger().log(Level.WARNING, "Could not find default resource: " + resourceName);
-                    }
+            if (!file.exists())
+                try {
+                    Files.copy(plugin.getResource("default/" + resourceName), file.getAbsoluteFile().toPath());
                 } catch (IOException exception) {
-                    plugin.getLogger().log(Level.SEVERE, "Could not copy default file: " + resourceName + " to " + file.getAbsolutePath(), exception); // More informative message
+                    exception.printStackTrace();
                 }
-            }
         }
 
         public File getFile() {

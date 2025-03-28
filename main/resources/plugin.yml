@@ -1,11 +1,39 @@
 name: MMOBuffs
-version: '1.2.3'
+version: '1.2.4'
 main: com.ehhthan.mmobuffs.MMOBuffs
 api-version: 1.17
 soft-depend: [PlaceholderAPI, MythicLib, AureliumSkills]
 authors: [ Ehhthan ]
+
 commands:
   mmobuffs:
-    description: Main command for MMOBuffs.
-    usage: /mmobuffs <subcommand>
-    aliases: [mmobuff]
+    description: Main mmobuffs command
+    usage: /mmobuffs help
+    aliases: [mmobuff, buffs, buff]
+    permission: mmobuffs.use
+
+permissions:
+  mmobuffs.use:
+    description: Allows use of the base command.
+    default: op
+  mmobuffs.reload:
+    description: Allows reloading the plugin.
+    default: op
+  mmobuffs.give:
+    description: Allows giving buffs.
+    default: op
+  mmobuffs.permanent:
+    description: Allows giving permanent buffs.
+    default: op
+  mmobuffs.clear:
+    description: Allows clearing buffs.
+    default: op
+  mmobuffs.time:
+    description: Allows changing buff duration.
+    default: op
+  mmobuffs.stack:
+    description: Allows changing buff stacks.
+    default: op
+  mmobuffs.list:
+    description: Allows listing buffs.
+    default: op

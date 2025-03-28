@@ -10,9 +10,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class WorldListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(EntityDeathEvent event) {
@@ -27,15 +24,10 @@ public class WorldListener implements Listener {
 
     // Removes the effect if the option is false and activated.
     private void removeFalseOption(Player player, EffectOption option) {
-        if (EffectHolder.DATA.containsKey(player)) {
-            EffectHolder holder = EffectHolder.DATA.get(player);
-            List<NamespacedKey> keysToRemove = new ArrayList<>();
-            holder.getEffects(true).stream()
-                    .filter(e -> !e.getStatusEffect().getOption(option))
-                    .map(effect -> effect.getStatusEffect().getKey())
-                    .forEach(keysToRemove::add);
-
-            keysToRemove.forEach(holder::removeEffect);
+        EffectHolder holder = EffectHolder.get(player);
+        for (NamespacedKey key : holder.getEffects(true).stream().filter(e -> !e.getStatusEffect().getOption(option))
+            .map(effect -> effect.getStatusEffect().getKey()).toList()) {
+            holder.removeEffect(key);
         }
     }
 }

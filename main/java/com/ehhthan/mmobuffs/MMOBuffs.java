@@ -6,6 +6,7 @@ import com.ehhthan.mmobuffs.comp.parser.type.PlaceholderAPIParser;
 import com.ehhthan.mmobuffs.comp.placeholderapi.MMOBuffsExpansion;
 import com.ehhthan.mmobuffs.listener.CombatListener;
 import com.ehhthan.mmobuffs.listener.WorldListener;
+import com.ehhthan.mmobuffs.manager.type.ConfigManager;
 import com.ehhthan.mmobuffs.manager.type.EffectManager;
 import com.ehhthan.mmobuffs.manager.type.LanguageManager;
 import com.ehhthan.mmobuffs.manager.type.ParserManager;
@@ -16,17 +17,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public final class MMOBuffs extends JavaPlugin {
+    private ConfigManager configManager;
     private LanguageManager languageManager;
     private EffectManager effectManager;
-    private StatManager statManager;
-
     private final ParserManager parserManager = new ParserManager();
-
     private static MMOBuffs INSTANCE;
-    private final Logger logger = getLogger();
+    private StatManager statManager;
 
     public static MMOBuffs getInst() {
         return INSTANCE;
@@ -37,79 +35,51 @@ public final class MMOBuffs extends JavaPlugin {
         INSTANCE = this;
         saveDefaultConfig();
 
-        validateConfigVersion();
-
-        try {
-            this.languageManager = new LanguageManager();
-            this.effectManager = new EffectManager();
-            this.statManager = new StatManager(this);
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Failed to initialize managers:", e);
-            getServer().getPluginManager().disablePlugin(this);
-            return;
+        final int configVersion = getConfig().contains("config-version", true) ? getConfig().getInt("config-version") : -1;
+        final int defConfigVersion = Objects.requireNonNull(getConfig().getDefaults()).getInt("config-version", -1);
+        if (configVersion != defConfigVersion) {
+            getLogger().warning("You may be using an outdated config.yml!");
+            getLogger().warning("(Your config version: '" + configVersion + "' | Expected config version: '"
+                    + defConfigVersion + "')");
         }
 
-        setupPlaceholderAPI();
+        this.configManager = new ConfigManager(this);
+        this.languageManager = new LanguageManager(this);
+        this.effectManager = new EffectManager(this);
 
-        registerEventListeners();
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            parserManager.register(new PlaceholderAPIParser());
+            new MMOBuffsExpansion().register();
+            getLogger().log(Level.INFO, "PlaceholderAPI support detected.");
+        }
+
+        this.statManager = new StatManager(this);
+
+        getServer().getPluginManager().registerEvents(new EffectHolder.PlayerListener(), this);
+        getServer().getPluginManager().registerEvents(new WorldListener(), this);
+        getServer().getPluginManager().registerEvents(new CombatListener(), this);
 
         registerCommands();
     }
 
-    private void validateConfigVersion() {
-        final int configVersion = getConfig().getInt("config-version", -1);
-        final int defConfigVersion = Objects.requireNonNull(getConfig().getDefaults()).getInt("config-version", -1);
-        if (configVersion != defConfigVersion) {
-            logger.warning("You may be using an outdated config.yml!");
-            logger.warning("(Your config version: '" + configVersion + "' | Expected config version: '"
-                    + defConfigVersion + "')");
-            logger.warning("Please delete your old config.yml and let the plugin regenerate it.");
-        }
-    }
-
-    private void setupPlaceholderAPI() {
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            parserManager.register(new PlaceholderAPIParser());
-            new MMOBuffsExpansion().register();
-            logger.info("PlaceholderAPI support detected.");
-        }
-    }
-
-    private void registerEventListeners() {
-        Bukkit.getPluginManager().registerEvents(new EffectHolder.PlayerListener(), this);
-        Bukkit.getPluginManager().registerEvents(new WorldListener(), this);
-        Bukkit.getPluginManager().registerEvents(new CombatListener(), this);
-    }
-
     private void registerCommands() {
-        MMOBuffsCommand mmoBuffsCommand = new MMOBuffsCommand(this, languageManager, parserManager);
-        PluginCommand command = getCommand("mmobuffs");
-        if (command != null) {
-            command.setExecutor(mmoBuffsCommand);
-            command.setTabCompleter(mmoBuffsCommand); // If you implement TabCompleter
-        } else {
-            logger.log(Level.SEVERE, "Could not register command: mmobuffs");
-        }
-    }
+        MMOBuffsCommand command = new MMOBuffsCommand(this, languageManager, parserManager);
 
-    @Override
-    public void onDisable() {
-        // Ensure all tasks are cancelled on disable
-        Bukkit.getScheduler().cancelTasks(this);
-        EffectHolder.DATA.clear(); // Clear loaded data
+        PluginCommand pluginCommand = getCommand("mmobuffs");
+        Objects.requireNonNull(pluginCommand).setExecutor(command);
+        Objects.requireNonNull(pluginCommand).setTabCompleter(command);
     }
-
 
     public void reload() {
-        try {
-            reloadConfig();
+        reloadConfig();
 
-            languageManager.reload();
-            effectManager.reload();
-            statManager.reload();
-        } catch (Exception e) {
-            logger.log(Level.SEVERE, "Failed to reload plugin:", e);
-        }
+        languageManager.reload();
+        effectManager.reload();
+        // statManager.reload(); // Removed as StatManager no longer has a reload method
+    }
+
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 
     public LanguageManager getLanguageManager() {

@@ -8,24 +8,27 @@ import com.ehhthan.mmobuffs.manager.Reloadable;
 import org.bukkit.configuration.ConfigurationSection;
 
 public final class EffectManager extends KeyedManager<StatusEffect> implements Reloadable {
-    public EffectManager() {
+    private final MMOBuffs plugin;
+
+    public EffectManager(MMOBuffs plugin) {
+        this.plugin = plugin;
         reload();
     }
 
     @Override
     public void reload() {
         clear();
-        ConfigFile config = new ConfigFile("effects");
+        ConfigFile config = new ConfigFile(plugin, "effects");
         for (String key : config.getConfig().getKeys(false)) {
-            ConfigurationSection section = config.getConfig().getConfigurationSection(key);
-            if (section != null) { // Check if the section is valid
+            ConfigurationSection effectSection = config.getConfig().getConfigurationSection(key);
+            if (effectSection != null) {
                 try {
-                    register(new StatusEffect(section));
+                    register(new StatusEffect(plugin, effectSection));
                 } catch (IllegalArgumentException e) {
                     error(key, e);
                 }
             } else {
-                MMOBuffs.getInst().getLogger().warning("Invalid configuration section for effect: " + key);
+                plugin.getLogger().warning("Invalid effect section for key: " + key);
             }
         }
     }

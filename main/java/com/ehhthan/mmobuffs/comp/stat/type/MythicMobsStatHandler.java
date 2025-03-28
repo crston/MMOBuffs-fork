@@ -1,6 +1,5 @@
 package com.ehhthan.mmobuffs.comp.stat.type;
 
-import com.ehhthan.mmobuffs.MMOBuffs;
 import com.ehhthan.mmobuffs.api.EffectHolder;
 import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
 import com.ehhthan.mmobuffs.api.stat.StatKey;
@@ -18,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.logging.Level;
 
 public class MythicMobsStatHandler implements StatHandler<StatRegistry> {
     private static final String NAMESPACE = "mythicmobs";
@@ -39,20 +37,19 @@ public class MythicMobsStatHandler implements StatHandler<StatRegistry> {
         StatRegistry adapted = adapt(holder);
         Optional<StatType> maybeStat = getExecutor().getStat(key.getStat().toUpperCase(Locale.ROOT));
         if (adapted != null && maybeStat.isPresent()) {
-            StatType stat = maybeStat.get();
             double modifierValue = switch (effect.getStatusEffect().getStackType()) {
                 case NORMAL, CASCADING -> value.getValue() * effect.getStacks();
                 default -> value.getValue();
             };
 
+            StatType stat = maybeStat.get();
             Optional<StatRegistry.StatMap> maybeData = adapted.getStatData(stat);
 
             if (maybeData.isPresent()) {
                 StatRegistry.StatMap data = maybeData.get();
+
                 data.put(MythicKey.get(key), adaptModifier(value.getType()), modifierValue);
             }
-        } else {
-            MMOBuffs.getInst().getLogger().log(Level.WARNING, "MythicMobs stat not found: " + key.getStat());
         }
     }
 
@@ -62,10 +59,7 @@ public class MythicMobsStatHandler implements StatHandler<StatRegistry> {
         Optional<StatType> maybeStat = getExecutor().getStat(key.getStat().toUpperCase(Locale.ROOT));
 
         if (adapted != null && maybeStat.isPresent()) {
-            StatType stat = maybeStat.get();
-            adapted.removeValue(stat, MythicKey.get(key));
-        } else {
-            MMOBuffs.getInst().getLogger().log(Level.WARNING, "MythicMobs stat not found: " + key.getStat());
+            adapted.removeValue(maybeStat.get(), MythicKey.get(key));
         }
     }
 
@@ -75,12 +69,10 @@ public class MythicMobsStatHandler implements StatHandler<StatRegistry> {
         Optional<StatType> maybeStat = getExecutor().getStat(key.getStat().toUpperCase(Locale.ROOT));
 
         if (adapted != null && maybeStat.isPresent()) {
-            StatType stat = maybeStat.get();
-            return String.valueOf(adapted.get(stat));
-        } else {
-            MMOBuffs.getInst().getLogger().log(Level.WARNING, "MythicMobs stat not found: " + key.getStat());
-            return "0";
+            return String.valueOf(adapted.get(maybeStat.get()));
         }
+
+        return "0";
     }
 
     private StatExecutor getExecutor() {
@@ -121,13 +113,6 @@ public class MythicMobsStatHandler implements StatHandler<StatRegistry> {
         @Override
         public int hashCode() {
             return Objects.hash(key);
-        }
-
-        @Override
-        public String toString() {
-            return "MythicKey{" +
-                    "key=" + key +
-                    '}';
         }
     }
 }

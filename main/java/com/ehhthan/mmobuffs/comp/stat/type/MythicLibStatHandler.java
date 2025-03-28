@@ -40,9 +40,8 @@ public class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
             };
 
             String stat = key.getStat().toUpperCase(Locale.ROOT);
-            // Unique ID
             adapted.getStatMap().getInstance(stat).registerModifier(new StatModifier(key.getUUID(), key.toString(), stat,
-                    modifierValue, adaptModifier(value.getType()), EquipmentSlot.OTHER, ModifierSource.OTHER));
+                modifierValue, adaptModifier(value.getType()), EquipmentSlot.OTHER, ModifierSource.OTHER));
         }
     }
 
@@ -50,10 +49,6 @@ public class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
     public void remove(@NotNull EffectHolder holder, @NotNull StatKey key) {
         MMOPlayerData adapted = adapt(holder);
         if (adapted != null) {
-            // Remove the stat modifier using the unique ID
-            // This assumes you have a way to track the modifier ID for each effect
-            // For example, you could store the modifier ID in the ActiveStatusEffect
-            // For simplicity, this example just removes all modifiers with the effect key
             adapted.getStatMap().getInstance(key.getStat().toUpperCase(Locale.ROOT)).removeModifier(key.getUUID());
         }
     }
@@ -65,7 +60,7 @@ public class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
         if (adapted != null) {
             StatModifier modifier = adapted.getStatMap().getInstance(key.getStat()).getModifier(key.getUUID());
             if (modifier != null)
-                return modifier.getValue() + "";
+                return modifier.toString();
         }
         return "0";
     }

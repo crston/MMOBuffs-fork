@@ -8,9 +8,8 @@ import org.jetbrains.annotations.NotNull;
 public class PlaceholderAPIParser implements Parser {
     @Override
     public String parse(@NotNull Player player, @NotNull String text) {
-        if (!player.isOnline()) {
+        if (!player.isOnline())
             return text;
-        }
         return PlaceholderAPI.setPlaceholders(player, text);
     }
 

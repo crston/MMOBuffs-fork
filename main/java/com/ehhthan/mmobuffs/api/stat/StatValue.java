@@ -34,19 +34,17 @@ public class StatValue {
         return value;
     }
 
-    public @NotNull
-    ValueType getType() {
+    public @NotNull ValueType getType() {
         return type;
     }
 
     @Override
-    public @NotNull
-    String toString() {
+    public @NotNull String toString() {
         return String.valueOf(
-                switch (type) {
-                    case FLAT -> value;
-                    case RELATIVE -> value + '%';
-                }
+            switch (type) {
+                case FLAT -> value;
+                case RELATIVE -> value + '%';
+            }
         );
     }
 

@@ -18,6 +18,11 @@ public abstract class KeylessManager<T> extends Manager<T> {
     }
 
     @Override
+    public int size() {
+        return managed.size();
+    }
+
+    @Override
     public void register(T property) {
         managed.add(property);
     }

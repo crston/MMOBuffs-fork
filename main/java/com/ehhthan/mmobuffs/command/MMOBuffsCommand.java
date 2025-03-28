@@ -8,7 +8,7 @@ import com.ehhthan.mmobuffs.api.modifier.Modifier;
 import com.ehhthan.mmobuffs.manager.type.LanguageManager;
 import com.ehhthan.mmobuffs.manager.type.ParserManager;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
@@ -22,11 +22,13 @@ import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
 
@@ -43,84 +45,78 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
         if (args.length == 0) {
-            // Basic help message or plugin info
-            sender.sendMessage("MMOBuffs Plugin - Available commands: reload, give, permanent, clear, time, stack, list");
+            sendHelpMessage(sender);
             return true;
         }
 
-        return switch (args[0].toLowerCase()) {
-            case "reload" -> {
-                reloadCommand(sender);
-                yield true;
-            }
-            case "give" -> {
-                giveCommand(sender, args);
-                yield true;
-            }
-            case "permanent" -> {
-                permanentCommand(sender, args);
-                yield true;
-            }
-            case "clear" -> {
-                clearCommand(sender, args);
-                yield true;
-            }
-            case "time" -> {
-                timeCommand(sender, args);
-                yield true;
-            }
-            case "stack" -> {
-                stackCommand(sender, args);
-                yield true;
-            }
-            case "list" -> {
-                listCommand(sender, args);
-                yield true;
-            }
-            default -> {
-                sender.sendMessage("Unknown subcommand. Use /mmobuffs for help.");
-                yield false;
-            }
-        };
+        String subCommand = args[0].toLowerCase(Locale.ROOT);
+
+        switch (subCommand) {
+            case "reload":
+                return reloadCommand(sender);
+            case "give":
+            case "add":
+                return giveCommand(sender, args);
+            case "permanent":
+            case "perm":
+                return permanentCommand(sender, args);
+            case "clear":
+            case "remove":
+                return clearCommand(sender, args);
+            case "time":
+            case "duration":
+                return timeCommand(sender, args);
+            case "stack":
+            case "stacks":
+                return stackCommand(sender, args);
+            case "list":
+                return listCommand(sender, args);
+            default:
+                sendUnknownCommandMessage(sender);
+                return true;
+        }
     }
 
-    private void reloadCommand(CommandSender sender) {
+    private boolean reloadCommand(CommandSender sender) {
         if (!sender.hasPermission("mmobuffs.reload")) {
-            sender.sendMessage("You do not have permission to use this command.");
-            return;
+            sendNoPermissionMessage(sender);
+            return true;
         }
         plugin.reload();
         Component message = language.getMessage("reload-command");
-        sender.sendMessage(message);
+        if (message != null) {
+            sender.sendMessage(message);
+        }
+        return true;
     }
 
-    private void giveCommand(CommandSender sender, String[] args) {
+    private boolean giveCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission("mmobuffs.give")) {
-            sender.sendMessage("You do not have permission to use this command.");
-            return;
+            sendNoPermissionMessage(sender);
+            return true;
         }
 
         if (args.length < 4) {
-            sender.sendMessage("Usage: /mmobuffs give <player> <effect> <duration> [duration-modifier] [stacks] [stack-modifier] [-s]");
-            return;
+            sendUsageMessage(sender, "give <player> <effect> <duration> [duration-modifier] [stacks] [stack-modifier] [-s]");
+            return true;
         }
 
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage("Player not found.");
-            return;
+            sendPlayerNotFoundMessage(sender);
+            return true;
         }
 
         NamespacedKey effectKey = NamespacedKey.fromString(args[2], plugin);
         if (effectKey == null) {
-            sender.sendMessage("Invalid effect key.");
-            return;
+            sendInvalidEffectKeyMessage(sender);
+            return true;
         }
 
         StatusEffect effect = plugin.getEffectManager().get(effectKey);
         if (effect == null) {
-            sender.sendMessage("Effect not found.");
-            return;
+            sendEffectNotFoundMessage(sender);
+            return true;
         }
 
         try {
@@ -134,49 +130,43 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
             ActiveStatusEffect activeEffect = ActiveStatusEffect.builder(effect).startDuration(duration).startStacks(stacks).build();
             holder.addEffect(activeEffect, durationModifier, stackModifier);
 
-            TagResolver resolver = TagResolver.builder()
-                    .resolvers(activeEffect.getStatusEffect().getResolver())
-                    .resolver(Placeholder.component("player", target.displayName()))
-                    .build();
-
-            Component message = language.getMessage("give-effect", true, resolver);
-
             if (!silent) {
-                sender.sendMessage(message);
+                sendEffectMessage(sender, target, activeEffect, "give-effect");
             }
-
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Invalid argument: " + e.getMessage());
+            sendInvalidArgumentMessage(sender);
         }
+
+        return true;
     }
 
-    private void permanentCommand(CommandSender sender, String[] args) {
+    private boolean permanentCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission("mmobuffs.permanent")) {
-            sender.sendMessage("You do not have permission to use this command.");
-            return;
+            sendNoPermissionMessage(sender);
+            return true;
         }
 
         if (args.length < 3) {
-            sender.sendMessage("Usage: /mmobuffs permanent <player> <effect> [stacks] [stack-modifier] [-s]");
-            return;
+            sendUsageMessage(sender, "permanent <player> <effect> [stacks] [stack-modifier] [-s]");
+            return true;
         }
 
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage("Player not found.");
-            return;
+            sendPlayerNotFoundMessage(sender);
+            return true;
         }
 
         NamespacedKey effectKey = NamespacedKey.fromString(args[2], plugin);
         if (effectKey == null) {
-            sender.sendMessage("Invalid effect key.");
-            return;
+            sendInvalidEffectKeyMessage(sender);
+            return true;
         }
 
         StatusEffect effect = plugin.getEffectManager().get(effectKey);
         if (effect == null) {
-            sender.sendMessage("Effect not found.");
-            return;
+            sendEffectNotFoundMessage(sender);
+            return true;
         }
 
         try {
@@ -188,109 +178,91 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
             ActiveStatusEffect activeEffect = ActiveStatusEffect.builder(effect).permanent(true).startStacks(stacks).build();
             holder.addEffect(activeEffect, Modifier.SET, stackModifier);
 
-            TagResolver resolver = TagResolver.builder()
-                    .resolvers(activeEffect.getStatusEffect().getResolver())
-                    .resolver(Placeholder.component("player", target.displayName()))
-                    .build();
-
-            Component message = language.getMessage("give-effect-permanent", true, resolver);
-
             if (!silent) {
-                sender.sendMessage(message);
+                sendEffectMessage(sender, target, activeEffect, "give-effect-permanent");
             }
-
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Invalid argument: " + e.getMessage());
+            sendInvalidArgumentMessage(sender);
         }
+
+        return true;
     }
 
-    private void clearCommand(CommandSender sender, String[] args) {
+    private boolean clearCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission("mmobuffs.clear")) {
-            sender.sendMessage("You do not have permission to use this command.");
-            return;
+            sendNoPermissionMessage(sender);
+            return true;
         }
 
         if (args.length < 3) {
-            sender.sendMessage("Usage: /mmobuffs clear <player> <effect|all|permanent> [-s]");
-            return;
+            sendUsageMessage(sender, "clear <player> <effect|all|permanent> [-s]");
+            return true;
         }
 
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage("Player not found.");
-            return;
+            sendPlayerNotFoundMessage(sender);
+            return true;
         }
 
-        String choice = args[2].toLowerCase();
+        String choice = args[2].toLowerCase(Locale.ROOT);
         boolean silent = (args.length > 3) && args[3].equalsIgnoreCase("-s");
         EffectHolder holder = EffectHolder.DATA.computeIfAbsent(target, EffectHolder::new);
-        Component message;
-        TagResolver.Single resolver = Placeholder.component("player", target.displayName());
 
         switch (choice) {
             case "all":
                 holder.removeEffects(false);
-                message = language.getMessage("clear-all-effects", true, resolver);
+                sendEffectMessage(sender, target, null, "clear-all-effects");
                 break;
             case "permanent":
                 holder.removeEffects(true);
-                message = language.getMessage("clear-permanent-effects", true, resolver);
+                sendEffectMessage(sender, target, null, "clear-permanent-effects");
                 break;
             default:
                 NamespacedKey key = NamespacedKey.fromString(choice, plugin);
                 if (key == null) {
-                    sender.sendMessage("Invalid effect key.");
-                    return;
+                    sendInvalidEffectKeyMessage(sender);
+                    return true;
                 }
-                if (holder.hasEffect(key)) {
-                    ActiveStatusEffect activeEffect = holder.getEffect(key);
-                    holder.removeEffect(key);
-
-                    TagResolver.Builder builder = TagResolver.builder().resolver(resolver);
-                    if (activeEffect != null) {
-                        builder.resolvers(activeEffect.getStatusEffect().getResolver());
-                    }
-                    message = language.getMessage("clear-effect", true, builder.build());
-
-                } else {
-                    sender.sendMessage("Player does not have that effect.");
-                    return;
+                if (!holder.hasEffect(key)) {
+                    sendEffectNotPresentMessage(sender);
+                    return true;
                 }
+                holder.removeEffect(key);
+                sendEffectMessage(sender, target, null, "clear-effect");
                 break;
         }
 
-        if (!silent) {
-            sender.sendMessage(message);
-        }
+        return true;
     }
 
-    private void timeCommand(CommandSender sender, String[] args) {
+    private boolean timeCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission("mmobuffs.time")) {
-            sender.sendMessage("You do not have permission to use this command.");
-            return;
+            sendNoPermissionMessage(sender);
+            return true;
         }
 
         if (args.length < 5) {
-            sender.sendMessage("Usage: /mmobuffs time <player> <effect> <set|add|subtract|multiply|divide> <duration> [-s]");
-            return;
+            sendUsageMessage(sender, "time <player> <effect> <set|add|subtract|multiply|divide> <duration> [-s]");
+            return true;
         }
 
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage("Player not found.");
-            return;
+            sendPlayerNotFoundMessage(sender);
+            return true;
         }
 
         NamespacedKey effectKey = NamespacedKey.fromString(args[2], plugin);
         if (effectKey == null) {
-            sender.sendMessage("Invalid effect key.");
-            return;
+            sendInvalidEffectKeyMessage(sender);
+            return true;
         }
 
         StatusEffect effect = plugin.getEffectManager().get(effectKey);
         if (effect == null) {
-            sender.sendMessage("Effect not found.");
-            return;
+            sendEffectNotFoundMessage(sender);
+            return true;
         }
 
         try {
@@ -302,57 +274,52 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
             ActiveStatusEffect activeEffect = holder.getEffect(effectKey);
 
             if (activeEffect == null) {
-                sender.sendMessage("Player does not have that effect.");
-                return;
+                sendEffectNotPresentMessage(sender);
+                return true;
             }
 
             int newDuration = calculateDuration(activeEffect.getDuration(), duration, operation);
-
             activeEffect.setDuration(newDuration);
 
-            TagResolver resolver = TagResolver.builder()
-                    .resolvers(activeEffect.getStatusEffect().getResolver())
-                    .resolver(Placeholder.component("player", target.displayName()))
-                    .build();
-
+            TagResolver resolver = TagResolver.builder().resolvers(activeEffect.getResolver()).resolver(Placeholder.component("player", target.displayName())).build();
             Component message = language.getMessage("time-effect", true, resolver);
-
-            if (!silent) {
+            if (!silent)
                 sender.sendMessage(message);
-            }
 
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Invalid argument: " + e.getMessage());
+            sendInvalidArgumentMessage(sender);
         }
+
+        return true;
     }
 
-    private void stackCommand(CommandSender sender, String[] args) {
+    private boolean stackCommand(CommandSender sender, String[] args) {
         if (!sender.hasPermission("mmobuffs.stack")) {
-            sender.sendMessage("You do not have permission to use this command.");
-            return;
+            sendNoPermissionMessage(sender);
+            return true;
         }
 
         if (args.length < 5) {
-            sender.sendMessage("Usage: /mmobuffs stack <player> <effect> <set|add|subtract|multiply|divide> <stacks> [-s]");
-            return;
+            sendUsageMessage(sender, "stack <player> <effect> <set|add|subtract|multiply|divide> <stacks> [-s]");
+            return true;
         }
 
         Player target = Bukkit.getPlayer(args[1]);
         if (target == null) {
-            sender.sendMessage("Player not found.");
-            return;
+            sendPlayerNotFoundMessage(sender);
+            return true;
         }
 
         NamespacedKey effectKey = NamespacedKey.fromString(args[2], plugin);
         if (effectKey == null) {
-            sender.sendMessage("Invalid effect key.");
-            return;
+            sendInvalidEffectKeyMessage(sender);
+            return true;
         }
 
         StatusEffect effect = plugin.getEffectManager().get(effectKey);
         if (effect == null) {
-            sender.sendMessage("Effect not found.");
-            return;
+            sendEffectNotFoundMessage(sender);
+            return true;
         }
 
         try {
@@ -364,50 +331,42 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
             ActiveStatusEffect activeEffect = holder.getEffect(effectKey);
 
             if (activeEffect == null) {
-                sender.sendMessage("Player does not have that effect.");
-                return;
+                sendEffectNotPresentMessage(sender);
+                return true;
             }
 
             int newStacks = calculateStacks(activeEffect.getStacks(), stacks, operation);
             activeEffect.setStacks(newStacks);
+            holder.updateEffect(effectKey);
 
-            TagResolver resolver = TagResolver.builder()
-                    .resolvers(activeEffect.getStatusEffect().getResolver())
-                    .resolver(Placeholder.component("player", target.displayName()))
-                    .build();
-
+            TagResolver resolver = TagResolver.builder().resolvers(activeEffect.getResolver()).resolver(Placeholder.component("player", target.displayName())).build();
             Component message = language.getMessage("stack-effect", true, resolver);
-
-            if (!silent) {
+            if (!silent)
                 sender.sendMessage(message);
-            }
 
         } catch (IllegalArgumentException e) {
-            sender.sendMessage("Invalid argument: " + e.getMessage());
+            sendInvalidArgumentMessage(sender);
         }
+
+        return true;
     }
 
-    private void listCommand(CommandSender sender, String[] args) {
-        if (!sender.hasPermission("mmobuffs.list")) {
-            sender.sendMessage("You do not have permission to use this command.");
-            return;
-        }
-
-        Player target;
+    private boolean listCommand(CommandSender sender, String[] args) {
+        EffectHolder holder;
         if (args.length > 1) {
-            target = Bukkit.getPlayer(args[1]);
+            Player target = Bukkit.getPlayer(args[1]);
             if (target == null) {
-                sender.sendMessage("Player not found.");
-                return;
+                sendPlayerNotFoundMessage(sender);
+                return true;
             }
+            holder = EffectHolder.DATA.computeIfAbsent(target, EffectHolder::new);
         } else if (sender instanceof Player) {
-            target = (Player) sender;
+            Player player = (Player) sender;
+            holder = EffectHolder.DATA.computeIfAbsent(player, EffectHolder::new);
         } else {
-            sender.sendMessage("Usage: /mmobuffs list <player>");
-            return;
+            sendUsageMessage(sender, "list [player]");
+            return true;
         }
-
-        EffectHolder holder = EffectHolder.DATA.computeIfAbsent(target, EffectHolder::new);
 
         List<Component> components = new LinkedList<>();
         components.add(language.getMessage("list-display.header", false));
@@ -415,38 +374,92 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
         String text = MMOBuffs.getInst().getLanguageManager().getString("list-display.effect-element");
 
         for (ActiveStatusEffect activeEffect : holder.getEffects(true)) {
-            TagResolver resolver = TagResolver.builder()
-                    .resolver(activeEffect.getStatusEffect().getResolver())
-                    .resolver(Placeholder.component("player", target.displayName())).build();
-            components.add(plugin.getParserManager().parse(target, text) != null ?
-                    MiniMessage.miniMessage().deserialize(plugin.getParserManager().parse(target, text), resolver) : Component.empty());
+            TagResolver resolver = TagResolver.builder().resolvers(activeEffect.getResolver()).resolver(Placeholder.component("player", holder.getPlayer().displayName())).build();
+            components.add(MiniMessage.miniMessage().deserialize((parser.parse(holder.getPlayer(), text)), resolver));
         }
 
         components.add(language.getMessage("list-display.footer", false));
 
-        final JoinConfiguration config = JoinConfiguration.builder()
-                .prefix(Component.empty())
-                .separator(Component.newline())
-                .suffix(Component.empty())
-                .build();
+        TextComponent.Builder builder = Component.text();
+        for (int i = 0; i < components.size(); i++) {
+            builder.append(components.get(i));
+            if (i != components.size() - 1)
+                builder.append(Component.newline());
+        }
 
-        Component message = Component.join(config, components);
+        sender.sendMessage(builder.build());
+        return true;
+    }
+
+    // Helper Methods for Messages
+    private void sendHelpMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("help-command"));
+    }
+
+    private void sendUnknownCommandMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("unknown-command"));
+    }
+
+    private void sendNoPermissionMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("no-permission"));
+    }
+
+    private void sendPlayerNotFoundMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("player-not-found"));
+    }
+
+    private void sendInvalidEffectKeyMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("invalid-effect-key"));
+    }
+
+    private void sendEffectNotFoundMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("effect-not-found"));
+    }
+
+    private void sendEffectNotPresentMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("effect-not-present"));
+    }
+
+    private void sendInvalidArgumentMessage(CommandSender sender) {
+        sender.sendMessage(language.getMessage("invalid-argument"));
+    }
+
+    private void sendUsageMessage(CommandSender sender, String usage) {
+        Component message = language.getMessage("usage-command");
+        if (message instanceof TextComponent) {
+            sender.sendMessage(((TextComponent) message).content().replace("<usage>", usage));
+        } else {
+            // Handle the case where the message is not a TextComponent
+            sender.sendMessage(message);
+        }
+    }
+
+    private void sendEffectMessage(CommandSender sender, Player target, ActiveStatusEffect effect, String messageKey) {
+        TagResolver resolver;
+        if (effect != null) {
+            resolver = TagResolver.builder().resolvers(effect.getResolver()).resolver(Placeholder.component("player", target.displayName())).build();
+        } else {
+            resolver = Placeholder.component("player", target.displayName());
+        }
+
+        Component message = language.getMessage(messageKey, true, resolver);
         sender.sendMessage(message);
     }
 
+    // Helper Methods for Parsing and Calculation
     private Modifier parseModifier(String input) {
         try {
-            return Modifier.valueOf(input.toUpperCase());
+            return Modifier.valueOf(input.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid modifier: " + input);
+            throw new IllegalArgumentException(language.getString("invalid-modifier"));
         }
     }
 
     private Operation parseOperation(String input) {
         try {
-            return Operation.valueOf(input.toUpperCase());
+            return Operation.valueOf(input.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid operation: " + input);
+            throw new IllegalArgumentException(language.getString("invalid-operation"));
         }
     }
 
@@ -456,7 +469,7 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
             case ADD -> current + value;
             case SUBTRACT -> current - value;
             case MULTIPLY -> current * value;
-            case DIVIDE -> (value != 0) ? current / value : current; // Avoid division by zero
+            case DIVIDE -> (value != 0) ? current / value : current;
         };
     }
 
@@ -466,83 +479,89 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
             case ADD -> current + value;
             case SUBTRACT -> current - value;
             case MULTIPLY -> current * value;
-            case DIVIDE -> (value != 0) ? current / value : current; // Avoid division by zero
+            case DIVIDE -> (value != 0) ? current / value : current;
         };
     }
 
     @Override
-    public @Nullable
-    List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
+    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
         if (args.length == 1) {
-            return Stream.of("reload", "give", "permanent", "clear", "time", "stack", "list")
-                    .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
+            return Arrays.asList("reload", "give", "permanent", "clear", "time", "stack", "list").stream()
+                    .filter(s -> s.toLowerCase(Locale.ROOT).startsWith(args[0].toLowerCase(Locale.ROOT)))
                     .collect(Collectors.toList());
         }
 
-        String subCommand = args[0].toLowerCase();
+        String subCommand = args[0].toLowerCase(Locale.ROOT);
 
-        if (subCommand.equals("give") || subCommand.equals("permanent") || subCommand.equals("clear") || subCommand.equals("time") || subCommand.equals("stack")) {
-            if (args.length == 2) {
-                return plugin.getServer().getOnlinePlayers().stream()
-                        .map(Player::getName)
-                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if (args.length == 3 && (!subCommand.equals("clear"))) {
-                return plugin.getEffectManager().keys().stream()
-                        .map(NamespacedKey::toString) // Use toString to show namespaced key
-                        .filter(name -> name.toLowerCase().startsWith(args[2].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if (subCommand.equals("clear") && args.length == 3) {
-                List<String> options = plugin.getEffectManager().keys().stream()
-                        .map(NamespacedKey::toString).collect(Collectors.toCollection(LinkedList::new)); // Use toString
-                options.add("all");
-                options.add("permanent");
-                return options.stream()
-                        .filter(name -> name.toLowerCase().startsWith(args[2].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if (subCommand.equals("give") && args.length == 4) {
-                return Stream.of("100", "600", "1200")
-                        .filter(s -> s.toLowerCase().startsWith(args[3].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if (subCommand.equals("time") && args.length == 4) {
-                return Stream.of("set", "add", "subtract", "multiply", "divide")
-                        .filter(op -> op.toLowerCase().startsWith(args[3].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if ((subCommand.equals("stack")) && args.length == 4) {
-                return Stream.of("set", "add", "subtract", "multiply", "divide")
-                        .filter(op -> op.toLowerCase().startsWith(args[3].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if ((subCommand.equals("give")) && args.length == 5) {
-                return Stream.of("SET", "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "KEEP")
-                        .filter(op -> op.toLowerCase().startsWith(args[4].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if ((subCommand.equals("give")) && args.length == 6) {
-                return Stream.of("1", "2", "3", "4", "5")
-                        .filter(op -> op.toLowerCase().startsWith(args[5].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
-            if ((subCommand.equals("give")) && args.length == 7) {
-                return Stream.of("SET", "ADD", "SUBTRACT", "MULTIPLY", "DIVIDE", "KEEP")
-                        .filter(op -> op.toLowerCase().startsWith(args[6].toLowerCase()))
-                        .collect(Collectors.toList());
-            }
+        switch (subCommand) {
+            case "give":
+            case "add":
+            case "permanent":
+            case "perm":
+            case "clear":
+            case "remove":
+            case "time":
+            case "duration":
+            case "stack":
+            case "stacks":
+                return tabCompleteEffectCommands(sender, args, subCommand);
+            case "list":
+                return tabCompleteListCommand(sender, args);
+            default:
+                return Collections.emptyList();
         }
+    }
 
-        if (subCommand.equals("list") && args.length == 2) {
-            return plugin.getServer().getOnlinePlayers().stream()
+    private List<String> tabCompleteEffectCommands(CommandSender sender, String[] args, String subCommand) {
+        if (args.length == 2) {
+            return Bukkit.getOnlinePlayers().stream()
                     .map(Player::getName)
-                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
                     .collect(Collectors.toList());
+        } else if (args.length == 3 && !subCommand.equalsIgnoreCase("clear") && !subCommand.equalsIgnoreCase("remove")) {
+            return plugin.getEffectManager().keys().stream()
+                    .map(NamespacedKey::toString)
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        } else if ((subCommand.equalsIgnoreCase("clear") || subCommand.equalsIgnoreCase("remove")) && args.length == 3) {
+            List<String> options = new ArrayList<>(plugin.getEffectManager().keys().stream()
+                    .map(NamespacedKey::toString).collect(Collectors.toList()));
+            options.addAll(Arrays.asList("all", "permanent"));
+            return options.stream()
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        } else if ((subCommand.equalsIgnoreCase("give") || subCommand.equalsIgnoreCase("add")) && args.length == 4) {
+            return Arrays.asList("100", "600", "1200").stream()
+                    .filter(s -> s.toLowerCase(Locale.ROOT).startsWith(args[3].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        } else if ((subCommand.equalsIgnoreCase("time") || subCommand.equalsIgnoreCase("duration") || subCommand.equalsIgnoreCase("stack") || subCommand.equalsIgnoreCase("stacks")) && args.length == 4) {
+            return Arrays.stream(Operation.values())
+                    .map(op -> op.name().toLowerCase(Locale.ROOT))
+                    .filter(op -> op.startsWith(args[3].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        } else if ((subCommand.equalsIgnoreCase("give") || subCommand.equalsIgnoreCase("add")) && args.length == 5) {
+            return Arrays.stream(Modifier.values())
+                    .map(modifier -> modifier.name().toLowerCase(Locale.ROOT))
+                    .filter(op -> op.startsWith(args[4].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        } else if ((subCommand.equalsIgnoreCase("give") || subCommand.equalsIgnoreCase("add")) && (args.length == 6 || args.length == 7)) { // Stacks and Stack Modifier
+            return Arrays.asList("1", "2", "3", "4", "5").stream()
+                    .filter(op -> op.startsWith(args[args.length - 1].toLowerCase(Locale.ROOT))) // Handle stack or modifier
+                    .collect(Collectors.toList());
+        } else {
+            return Collections.emptyList();
         }
+    }
 
-        return Collections.emptyList();
+    private List<String> tabCompleteListCommand(CommandSender sender, String[] args) {
+        if (args.length == 2) {
+            return Bukkit.getOnlinePlayers().stream()
+                    .map(Player::getName)
+                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(args[1].toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        } else {
+            return Collections.emptyList();
+        }
     }
 
     enum Operation {

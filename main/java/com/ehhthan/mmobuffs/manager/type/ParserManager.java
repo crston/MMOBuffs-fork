@@ -7,10 +7,15 @@ import org.jetbrains.annotations.NotNull;
 
 public class ParserManager extends KeylessManager<Parser> {
     public String parse(@NotNull Player player, @NotNull String text) {
-        String parsedText = text;
-        for (Parser parser : values()) {
-            parsedText = parser.parse(player, parsedText);
-        }
-        return parsedText;
+        for (Parser parser : values())
+            text = parser.parse(player, text);
+        return text;
+    }
+
+    public boolean hasPlaceholder(String text) {
+        for (Parser parser : values())
+            if (parser.containsPlaceholders(text))
+                return true;
+        return false;
     }
 }

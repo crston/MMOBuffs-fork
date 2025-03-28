@@ -10,7 +10,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -35,21 +34,18 @@ public class CombatListener implements Listener {
     }
 
     private void call(Player player, StackType... types) {
-        if (EffectHolder.DATA.containsKey(player)) {
-            EffectHolder holder = EffectHolder.DATA.get(player);
+        if (EffectHolder.has(player)) {
+            EffectHolder holder = EffectHolder.get(player);
             List<StackType> typeList = Arrays.asList(types);
-            List<ActiveStatusEffect> effectsToUpdate = new ArrayList<>();
 
             Collection<ActiveStatusEffect> effects = holder.getEffects(true);
             for (ActiveStatusEffect effect : effects) {
                 StackType type = effect.getStatusEffect().getStackType();
                 if (typeList.contains(type)) {
                     effect.triggerStack(type);
-                    effectsToUpdate.add(effect);
+                    holder.updateEffect(effect.getStatusEffect().getKey());
                 }
             }
-
-            effectsToUpdate.forEach(effect -> holder.updateEffect(effect.getStatusEffect().getKey()));
         }
     }
 }
