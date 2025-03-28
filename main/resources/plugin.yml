@@ -1,0 +1,11 @@
+name: MMOBuffs
+version: '1.2.3'
+main: com.ehhthan.mmobuffs.MMOBuffs
+api-version: 1.17
+soft-depend: [PlaceholderAPI, MythicLib, AureliumSkills]
+authors: [ Ehhthan ]
+commands:
+  mmobuffs:
+    description: Main command for MMOBuffs.
+    usage: /mmobuffs <subcommand>
+    aliases: [mmobuff]

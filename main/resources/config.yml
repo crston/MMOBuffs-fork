@@ -1,0 +1,42 @@
+resource-pack:
+  # If enabled will require the use of the resource pack.
+  enabled: true
+  # The custom font to be used to display the formatting for effects.
+  font: "mmobuffs:default"
+
+# Set the settings of the bossbar display here.
+bossbar-display:
+  enabled: true
+
+  # How often the bossbar should update in ticks.
+  update-ticks: 20
+
+  # If the bossbar should continue to display even when the holder has no buffs.
+  display-when-empty: false
+
+  # What characters should separate the effects in the bossbar.
+  effect-separator: " "
+
+  # Possible colors: white, purple, yellow, green, red, blue, and pink.
+  color: 'white'
+
+  # Possible overlays: progress, notched_6, notched_10, notched_12, notched_20.
+  overlay: 'progress'
+
+  # Default percentage value of the bossbar. Value must be between [0,1].
+  value: 0
+
+stat-handler:
+  # The default stat handler to use if not specified.
+  # Natively Supported: mythiclib, aureliumskills
+  default: mythiclib
+
+# How effects are sorted when displayed.
+sorting:
+  # If true the effects with the lowest duration left will be displayed first.
+  duration-ascending: true
+
+# Whether to use a shortened display.
+shorten-duration-display: true
+
+config-version: 3
