@@ -23,7 +23,7 @@ public final class EffectManager extends KeyedManager<StatusEffect> implements R
             ConfigurationSection effectSection = config.getConfig().getConfigurationSection(key);
             if (effectSection != null) {
                 try {
-                    register(new StatusEffect(plugin, effectSection));
+                    register(new StatusEffect(effectSection));
                 } catch (IllegalArgumentException e) {
                     error(key, e);
                 }

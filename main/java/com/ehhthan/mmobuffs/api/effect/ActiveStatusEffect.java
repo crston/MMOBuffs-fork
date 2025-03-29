@@ -118,14 +118,14 @@ public class ActiveStatusEffect implements Resolver, Comparable<ActiveStatusEffe
     @Override
     public TagResolver getResolver() {
         TagResolver.Builder resolver = TagResolver.builder().resolvers(
-            Placeholder.parsed("seconds", getDuration() + ""),
-            Placeholder.component("duration", getDurationDisplay().display()),
-            Placeholder.parsed("stacks", getStacks() + ""),
-            Placeholder.parsed("start-duration", getStartDuration() + ""),
-            Placeholder.parsed("start-stacks", getStartStacks() + ""));
+                Placeholder.parsed("seconds", getDuration() + ""),
+                Placeholder.component("duration", getDurationDisplay().display()),
+                Placeholder.parsed("stacks", getStacks() + ""),
+                Placeholder.parsed("start-duration", getStartDuration() + ""),
+                Placeholder.parsed("start-stacks", getStartStacks() + ""));
 
         for (Map.Entry<StatKey, StatValue> entry : getStatusEffect().getStats().entrySet()) {
-           resolver.resolver(Placeholder.parsed("stat-" + entry.getKey().getStat(), entry.getValue().toString()));
+            resolver.resolver(Placeholder.parsed("stat-" + entry.getKey().getStat(), entry.getValue().toString()));
         }
 
         resolver.resolver(getStatusEffect().getResolver());
@@ -135,7 +135,7 @@ public class ActiveStatusEffect implements Resolver, Comparable<ActiveStatusEffe
 
     public ActiveStatusEffect merge(ActiveStatusEffect latest, Modifier durationModifier, Modifier stackModifier) {
         Preconditions.checkArgument(statusEffect.getKey().equals(latest.statusEffect.getKey()),
-            "Effects of two different types cannot be merged: %s + %s", statusEffect.getKey(), latest.statusEffect.getKey());
+                "Effects of two different types cannot be merged: %s + %s", statusEffect.getKey(), latest.statusEffect.getKey());
 
         // Merge duration with specified modifier.
         switch (durationModifier) {
@@ -233,15 +233,6 @@ public class ActiveStatusEffect implements Resolver, Comparable<ActiveStatusEffe
             this.effect = effect;
         }
 
-        ActiveEffectBuilder(ActiveStatusEffect activeEffect) {
-            this.effect = activeEffect.statusEffect;
-            this.startDuration = activeEffect.startDuration;
-            this.startStacks = activeEffect.startStacks;
-
-            this.duration = activeEffect.duration;
-            this.stacks = activeEffect.stacks;
-            this.permanent = activeEffect.permanent;
-        }
 
         public ActiveEffectBuilder startDuration(int startDuration) {
             this.startDuration = Math.max(0, startDuration);

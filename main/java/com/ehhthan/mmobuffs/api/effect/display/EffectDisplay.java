@@ -23,10 +23,6 @@ public class EffectDisplay {
         this.text = section.getString("text","<icon> <duration>");
     }
 
-    public String getIcon() {
-        return icon;
-    }
-
     public String getText() {
         return text;
     }

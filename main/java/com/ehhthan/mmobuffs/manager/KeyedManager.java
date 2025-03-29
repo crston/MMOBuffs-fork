@@ -32,14 +32,6 @@ public abstract class KeyedManager<T> extends Manager<T> {
             managed.put(((Keyed) property).getKey(), property);
     }
 
-    public void register(NamespacedKey key, T property) {
-        managed.put(key, property);
-    }
-
-    public void registerAll(Map<NamespacedKey, T> properties) {
-        managed.putAll(properties);
-    }
-
     public Collection<NamespacedKey> keys() {
         return managed.keySet();
     }

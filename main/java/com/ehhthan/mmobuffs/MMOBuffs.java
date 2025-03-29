@@ -2,25 +2,18 @@ package com.ehhthan.mmobuffs;
 
 import com.ehhthan.mmobuffs.api.EffectHolder;
 import com.ehhthan.mmobuffs.command.MMOBuffsCommand;
-import com.ehhthan.mmobuffs.comp.parser.type.PlaceholderAPIParser;
-import com.ehhthan.mmobuffs.comp.placeholderapi.MMOBuffsExpansion;
 import com.ehhthan.mmobuffs.listener.CombatListener;
 import com.ehhthan.mmobuffs.listener.WorldListener;
 import com.ehhthan.mmobuffs.manager.type.ConfigManager;
 import com.ehhthan.mmobuffs.manager.type.EffectManager;
-import com.ehhthan.mmobuffs.manager.type.LanguageManager;
 import com.ehhthan.mmobuffs.manager.type.ParserManager;
 import com.ehhthan.mmobuffs.manager.type.StatManager;
-import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.Objects;
-import java.util.logging.Level;
 
 public final class MMOBuffs extends JavaPlugin {
-    private ConfigManager configManager;
-    private LanguageManager languageManager;
     private EffectManager effectManager;
     private final ParserManager parserManager = new ParserManager();
     private static MMOBuffs INSTANCE;
@@ -43,17 +36,11 @@ public final class MMOBuffs extends JavaPlugin {
                     + defConfigVersion + "')");
         }
 
-        this.configManager = new ConfigManager(this);
-        this.languageManager = new LanguageManager(this);
+        new ConfigManager(this);
         this.effectManager = new EffectManager(this);
-
-        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
-            parserManager.register(new PlaceholderAPIParser());
-            new MMOBuffsExpansion().register();
-            getLogger().log(Level.INFO, "PlaceholderAPI support detected.");
-        }
-
         this.statManager = new StatManager(this);
+
+        parserManager.registerPAPI(); // Register PAPI
 
         getServer().getPluginManager().registerEvents(new EffectHolder.PlayerListener(), this);
         getServer().getPluginManager().registerEvents(new WorldListener(), this);
@@ -62,28 +49,23 @@ public final class MMOBuffs extends JavaPlugin {
         registerCommands();
     }
 
+    @Override
+    public void onDisable() {
+        parserManager.unregisterPAPI(); // Unregister PAPI
+    }
+
     private void registerCommands() {
-        MMOBuffsCommand command = new MMOBuffsCommand(this, languageManager, parserManager);
+        MMOBuffsCommand command = new MMOBuffsCommand(this);
 
         PluginCommand pluginCommand = getCommand("mmobuffs");
         Objects.requireNonNull(pluginCommand).setExecutor(command);
         Objects.requireNonNull(pluginCommand).setTabCompleter(command);
     }
 
-    public void reload() {
+    public boolean reload() {
         reloadConfig();
-
-        languageManager.reload();
         effectManager.reload();
-        // statManager.reload(); // Removed as StatManager no longer has a reload method
-    }
-
-    public ConfigManager getConfigManager() {
-        return configManager;
-    }
-
-    public LanguageManager getLanguageManager() {
-        return languageManager;
+        return false;
     }
 
     public EffectManager getEffectManager() {

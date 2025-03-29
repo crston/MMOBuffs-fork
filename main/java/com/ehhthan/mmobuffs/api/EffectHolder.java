@@ -57,81 +57,6 @@ public class EffectHolder implements PersistentDataHolder {
     private BossBar bossBar;
     private final Component separator;
 
-    private final BukkitRunnable effectUpdater = new BukkitRunnable() {
-        @Override
-        public void run() {
-            if (!player.isOnline()) {
-                cancel();
-                return;
-            }
-
-            // Iterate over a copy of the values to avoid ConcurrentModificationException
-            List<ActiveStatusEffect> effectsToRemove = new LinkedList<>();
-            for (ActiveStatusEffect effect : new LinkedList<>(effects.values())) {
-                // Tick the effect and update if needed.
-                if (effect.tick())
-                    updateEffect(effect.getStatusEffect().getKey());
-
-                // Remove if the effect is no longer active.
-                if (!effect.isActive()) {
-                    MMOBuffs.getInst().getStatManager().remove(EffectHolder.this, effect);
-                    effectsToRemove.add(effect);
-                }
-            }
-
-            // Remove effects after iteration
-            effectsToRemove.forEach(effect -> effects.remove(effect.getStatusEffect().getKey()));
-
-            // Save to the persistent data container.
-            save();
-        }
-    };
-
-    private final BukkitRunnable bossBarUpdater = new BukkitRunnable() {
-        @Override
-        public void run() {
-            FileConfiguration config = MMOBuffs.getInst().getConfig();
-            // Creates a list of the displayable active status effects in ascending order.
-            if (!config.getBoolean("bossbar-display.enabled", true)) {
-                if (bossBar != null) {
-                    player.hideBossBar(bossBar);
-                }
-                return;
-            }
-
-            List<ActiveStatusEffect> sortedEffects = new LinkedList<>(effects.values().stream().filter(e -> e.getStatusEffect().hasDisplay()).sorted().toList());
-            if (sortedEffects.isEmpty()) {
-                if (bossBar != null) {
-                    if (!config.getBoolean("bossbar-display.display-when-empty", false)) {
-                        player.hideBossBar(bossBar);
-                    } else {
-                        bossBar.name(Component.empty());
-                    }
-                }
-            } else {
-                TextComponent.Builder builder = Component.text();
-                // Checks if the effects should be descending and reverses.
-                if (!config.getBoolean("sorting.duration-ascending", true))
-                    Collections.reverse(sortedEffects);
-
-                for (int i = 0; i < sortedEffects.size(); i++) {
-                    // Joins with the separator if previous component exists.
-                    if (i != 0) {
-                        builder.append(separator);
-                    }
-
-                    ActiveStatusEffect effect = sortedEffects.get(i);
-                    builder.append(effect.getStatusEffect().getDisplay().build(player, effect));
-                }
-
-                if (bossBar != null) {
-                    bossBar.name(builder.build());
-                    player.showBossBar(bossBar);
-                }
-            }
-        }
-    };
-
     // The holder's effects.
     private final Map<NamespacedKey, ActiveStatusEffect> effects = new ConcurrentHashMap<>(); // Use ConcurrentHashMap
 
@@ -148,14 +73,96 @@ public class EffectHolder implements PersistentDataHolder {
         // Load saved effects.
         if (getPersistentDataContainer().has(EFFECTS, CustomTagTypes.ACTIVE_EFFECTS)) {
             ActiveStatusEffect[] savedEffects = getPersistentDataContainer().get(EFFECTS, CustomTagTypes.ACTIVE_EFFECTS);
-            if (savedEffects != null && savedEffects.length > 0)
+            if (savedEffects != null)
                 for (ActiveStatusEffect effect : savedEffects) {
                     if (effect != null)
                         addEffect(effect, Modifier.SET, Modifier.SET);
                 }
         }
 
+        // Creates a list of the displayable active status effects in ascending order.
+        // Checks if the effects should be descending and reverses.
+        // Joins with the separator if previous component exists.
+        BukkitRunnable bossBarUpdater = new BukkitRunnable() {
+            @Override
+            public void run() {
+                FileConfiguration config = MMOBuffs.getInst().getConfig();
+                // Creates a list of the displayable active status effects in ascending order.
+                if (!config.getBoolean("bossbar-display.enabled", true)) {
+                    if (bossBar != null) {
+                        player.hideBossBar(bossBar);
+                    }
+                    return;
+                }
+
+                List<ActiveStatusEffect> sortedEffects = new LinkedList<>(effects.values().stream().filter(e -> e.getStatusEffect().hasDisplay()).sorted().toList());
+                if (sortedEffects.isEmpty()) {
+                    if (bossBar != null) {
+                        if (!config.getBoolean("bossbar-display.display-when-empty", false)) {
+                            player.hideBossBar(bossBar);
+                        } else {
+                            bossBar.name(Component.empty());
+                        }
+                    }
+                } else {
+                    TextComponent.Builder builder = Component.text();
+                    // Checks if the effects should be descending and reverses.
+                    if (!config.getBoolean("sorting.duration-ascending", true))
+                        Collections.reverse(sortedEffects);
+
+                    for (int i = 0; i < sortedEffects.size(); i++) {
+                        // Joins with the separator if previous component exists.
+                        if (i != 0) {
+                            builder.append(separator);
+                        }
+
+                        ActiveStatusEffect effect = sortedEffects.get(i);
+                        assert effect.getStatusEffect().getDisplay() != null;
+                        builder.append(effect.getStatusEffect().getDisplay().build(player, effect));
+                    }
+
+                    if (bossBar != null) {
+                        bossBar.name(builder.build());
+                        player.showBossBar(bossBar);
+                    }
+                }
+            }
+        };
         bossBarUpdater.runTaskTimer(MMOBuffs.getInst(), 2, MMOBuffs.getInst().getConfig().getInt("bossbar-display.update-ticks", 20));
+        // Iterate over a copy of the values to avoid ConcurrentModificationException
+        // Tick the effect and update if needed.
+        // Remove if the effect is no longer active.
+        // Remove effects after iteration
+        // Save to the persistent data container.
+        BukkitRunnable effectUpdater = new BukkitRunnable() {
+            @Override
+            public void run() {
+                if (!player.isOnline()) {
+                    cancel();
+                    return;
+                }
+
+                // Iterate over a copy of the values to avoid ConcurrentModificationException
+                List<ActiveStatusEffect> effectsToRemove = new LinkedList<>();
+                for (ActiveStatusEffect effect : new LinkedList<>(effects.values())) {
+                    // Tick the effect and update if needed.
+                    if (effect.tick())
+                        updateEffect(effect.getStatusEffect().getKey());
+
+                    // Remove if the effect is no longer active.
+                    if (!effect.isActive()) {
+                        MMOBuffs.getInst().getStatManager().remove(EffectHolder.this, effect);
+                        effectsToRemove.add(effect);
+                    }
+                }
+
+                // Remove effects after iteration
+                effectsToRemove.forEach(effect -> effects.remove(effect.getStatusEffect().getKey()));
+
+                // Save to the persistent data container.
+                save();
+            }
+        };
         effectUpdater.runTaskTimer(MMOBuffs.getInst(), 1, 20);
 
         if (bossBar != null && MMOBuffs.getInst().getConfig().getBoolean("bossbar-display.display-when-empty", false))
@@ -268,9 +275,5 @@ public class EffectHolder implements PersistentDataHolder {
         public void onLeave(PlayerQuitEvent e) {
             DATA.remove(e.getPlayer());
         }
-    }
-
-    public BossBar getBossBar() {
-        return bossBar;
     }
 }

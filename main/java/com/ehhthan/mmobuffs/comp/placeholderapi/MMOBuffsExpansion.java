@@ -11,12 +11,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
+import java.util.Objects;
 
 public class MMOBuffsExpansion extends PlaceholderExpansion {
     private final MMOBuffs plugin;
 
-    public MMOBuffsExpansion() {
-        this.plugin = MMOBuffs.getInst();
+    public MMOBuffsExpansion(@NotNull final MMOBuffs plugin) {
+        this.plugin = plugin;
     }
 
     @Override
@@ -50,8 +51,8 @@ public class MMOBuffsExpansion extends PlaceholderExpansion {
 
                 switch (option) {
                     case "name" -> {
-                        if (MMOBuffs.getInst().getEffectManager().has(key))
-                            return PlainTextComponentSerializer.plainText().serialize(MMOBuffs.getInst().getEffectManager().get(key).getName());
+                        if (plugin.getEffectManager().has(key))
+                            return PlainTextComponentSerializer.plainText().serialize(plugin.getEffectManager().get(key).getName());
                         else
                             return "";
                     }
@@ -61,28 +62,28 @@ public class MMOBuffsExpansion extends PlaceholderExpansion {
 
                     case "duration" -> {
                         if (holder.hasEffect(key))
-                            return PlainTextComponentSerializer.plainText().serialize(holder.getEffect(key).getDurationDisplay().display());
+                            return PlainTextComponentSerializer.plainText().serialize(Objects.requireNonNull(holder.getEffect(key)).getDurationDisplay().display());
                         else
                             return "0";
                     }
 
                     case "seconds" -> {
                         if (holder.hasEffect(key))
-                            return holder.getEffect(key).getDuration() + "";
+                            return Objects.requireNonNull(holder.getEffect(key)).getDuration() + "";
                         else
                             return "0";
                     }
 
                     case "stacks" -> {
                         if (holder.hasEffect(key))
-                            return String.valueOf(holder.getEffect(key).getStacks());
+                            return String.valueOf(Objects.requireNonNull(holder.getEffect(key)).getStacks());
                         else
                             return "0";
                     }
 
                     case "maxstacks" -> {
                         if (holder.hasEffect(key))
-                            return String.valueOf(holder.getEffect(key).getStatusEffect().getMaxStacks());
+                            return String.valueOf(Objects.requireNonNull(holder.getEffect(key)).getStatusEffect().getMaxStacks());
                         else
                             return "0";
                     }
@@ -105,7 +106,7 @@ public class MMOBuffsExpansion extends PlaceholderExpansion {
                                         return plugin.getStatManager().getValue(holder, statKey);
                                     }
                                     case "basevalue" -> {
-                                        return holder.getEffect(key).getStatusEffect().getStats().get(statKey).toString();
+                                        return Objects.requireNonNull(holder.getEffect(key)).getStatusEffect().getStats().get(statKey).toString();
                                     }
                                 }
                             } else

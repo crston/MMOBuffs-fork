@@ -4,15 +4,12 @@ import com.ehhthan.mmobuffs.MMOBuffs;
 import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 import java.time.Duration;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Locale;
 import java.util.function.Function;
 
-@SuppressWarnings("ClassCanBeRecord")
 public class TimedDisplay implements DurationDisplay {
     private static final Function<Duration, Component> LONG_DISPLAY_FORMAT = (duration) -> {
         List<Component> components = new LinkedList<>();
@@ -22,12 +19,12 @@ public class TimedDisplay implements DurationDisplay {
                 components.add(format);
         }
 
-        Component separator = MMOBuffs.getInst().getLanguageManager().getMessage("duration-display.separator", false);
+        Component separator = Component.text(", "); // Default separator
 
         TextComponent.Builder builder = Component.text();
         for (int i = 0; i < components.size(); i++) {
             builder.append(components.get(i));
-            if (separator != null && i != components.size()-1) {
+            if (i != components.size() - 1) {
                 builder.append(separator);
             }
         }
@@ -55,8 +52,8 @@ public class TimedDisplay implements DurationDisplay {
     public Component display() {
         Duration duration = Duration.ofSeconds(effect.getDuration());
         return (MMOBuffs.getInst().getConfig().getBoolean("shorten-duration-display", true))
-            ? SHORT_DISPLAY_FORMAT.apply(duration)
-            : LONG_DISPLAY_FORMAT.apply(duration);
+                ? SHORT_DISPLAY_FORMAT.apply(duration)
+                : LONG_DISPLAY_FORMAT.apply(duration);
     }
 
     enum TimeType {
@@ -67,7 +64,6 @@ public class TimedDisplay implements DurationDisplay {
             }
         },
         HOURS {
-            @Override
             int partFromDuration(Duration duration) {
                 return duration.toHoursPart();
             }
@@ -85,11 +81,6 @@ public class TimedDisplay implements DurationDisplay {
             }
         };
 
-        private final String id;
-
-        TimeType() {
-            id = name().toLowerCase(Locale.ROOT);
-        }
 
         int partFromDuration(Duration duration) {
             throw new IllegalArgumentException("This method should be overridden.");
@@ -97,8 +88,12 @@ public class TimedDisplay implements DurationDisplay {
 
         Component format(Duration duration) {
             int value = partFromDuration(duration);
-            return (value > 0) ? MMOBuffs.getInst().getLanguageManager().
-                getMessage("duration-display." + id, false, Placeholder.parsed("value", value + "")) : Component.empty();
+            if (value > 0) {
+                String unit = name().toLowerCase();
+                return Component.text(value + " " + unit);
+            } else {
+                return Component.empty();
+            }
         }
     }
 }
