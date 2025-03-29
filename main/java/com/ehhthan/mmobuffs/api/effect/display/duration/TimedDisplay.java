@@ -89,8 +89,8 @@ public class TimedDisplay implements DurationDisplay {
         Component format(Duration duration) {
             int value = partFromDuration(duration);
             if (value > 0) {
-                String unit = name().toLowerCase();
-                return Component.text(value + " " + unit);
+                // Remove the unit string
+                return Component.text(String.valueOf(value));
             } else {
                 return Component.empty();
             }
