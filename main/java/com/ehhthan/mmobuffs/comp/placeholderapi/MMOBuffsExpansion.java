@@ -16,8 +16,8 @@ import java.util.Objects;
 public class MMOBuffsExpansion extends PlaceholderExpansion {
     private final MMOBuffs plugin;
 
-    public MMOBuffsExpansion(@NotNull final MMOBuffs plugin) {
-        this.plugin = plugin;
+    public MMOBuffsExpansion() {
+        this.plugin = MMOBuffs.getInst();
     }
 
     @Override
@@ -51,8 +51,8 @@ public class MMOBuffsExpansion extends PlaceholderExpansion {
 
                 switch (option) {
                     case "name" -> {
-                        if (plugin.getEffectManager().has(key))
-                            return PlainTextComponentSerializer.plainText().serialize(plugin.getEffectManager().get(key).getName());
+                        if (MMOBuffs.getInst().getEffectManager().has(key))
+                            return PlainTextComponentSerializer.plainText().serialize(MMOBuffs.getInst().getEffectManager().get(key).getName());
                         else
                             return "";
                     }

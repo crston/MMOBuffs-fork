@@ -53,8 +53,9 @@ public class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
         }
     }
 
+    @NotNull
     @Override
-    public @NotNull String getValue(@NotNull EffectHolder holder, @NotNull StatKey key) {
+    public String getValue(@NotNull EffectHolder holder, @NotNull StatKey key) {
         MMOPlayerData adapted = adapt(holder);
         if (adapted != null) {
             StatModifier modifier = adapted.getStatMap().getInstance(key.getStat()).getModifier(key.getUUID());

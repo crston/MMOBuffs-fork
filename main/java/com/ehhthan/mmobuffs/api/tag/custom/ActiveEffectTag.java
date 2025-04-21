@@ -1,6 +1,7 @@
 package com.ehhthan.mmobuffs.api.tag.custom;
 
 import com.ehhthan.mmobuffs.MMOBuffs;
+import com.ehhthan.mmobuffs.api.effect.ActiveEffectBuilder;
 import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
 import com.ehhthan.mmobuffs.api.effect.StatusEffect;
 import org.bukkit.NamespacedKey;
@@ -9,8 +10,6 @@ import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
-import static com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect.ActiveEffectBuilder;
-import static com.ehhthan.mmobuffs.api.tag.CustomTagTypes.BOOLEAN;
 import static com.ehhthan.mmobuffs.api.tag.CustomTagTypes.NAMESPACED_KEY;
 import static com.ehhthan.mmobuffs.util.KeyUtil.key;
 

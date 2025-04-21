@@ -2,12 +2,12 @@ package com.ehhthan.mmobuffs.api.effect.display;
 
 import com.ehhthan.mmobuffs.MMOBuffs;
 import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
+import io.lumine.mythic.bukkit.utils.lib.lang3.StringEscapeUtils;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-import org.apache.commons.lang.StringEscapeUtils;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
@@ -21,6 +21,10 @@ public class EffectDisplay {
     public EffectDisplay(@NotNull ConfigurationSection section) {
         this.icon = section.getString("icon", "");
         this.text = section.getString("text","<icon> <duration>");
+    }
+
+    public String getIcon() {
+        return icon;
     }
 
     public String getText() {

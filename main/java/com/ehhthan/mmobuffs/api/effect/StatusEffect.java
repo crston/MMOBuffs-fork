@@ -6,11 +6,11 @@ import com.ehhthan.mmobuffs.api.effect.option.EffectOption;
 import com.ehhthan.mmobuffs.api.effect.stack.StackType;
 import com.ehhthan.mmobuffs.api.stat.StatKey;
 import com.ehhthan.mmobuffs.api.stat.StatValue;
+import io.lumine.mythic.bukkit.utils.lib.lang3.text.WordUtils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
-import org.apache.commons.lang.WordUtils;
 import org.bukkit.Keyed;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -25,16 +25,21 @@ import java.util.Map;
 public class StatusEffect implements Keyed, Resolver {
     private final NamespacedKey key;
     private final Component name;
+    private final Component description;
+
     private final Map<StatKey, StatValue> stats = new LinkedHashMap<>();
     private final Map<EffectOption, Boolean> options = new HashMap<>();
+
     private final int maxStacks;
     private final StackType stackType;
+
     private final EffectDisplay display;
+
     @SuppressWarnings("ConstantConditions")
     public StatusEffect(@NotNull ConfigurationSection section) {
         this.key = NamespacedKey.fromString(section.getName().toLowerCase(Locale.ROOT), MMOBuffs.getInst());
         this.name = MiniMessage.miniMessage().deserialize(section.getString("display-name", WordUtils.capitalize(key.getKey())));
-        MiniMessage.miniMessage().deserialize(section.getString("description", ""));
+        this.description = MiniMessage.miniMessage().deserialize(section.getString("description", ""));
 
         if (section.isConfigurationSection("stats")) {
             ConfigurationSection statSection = section.getConfigurationSection("stats");
@@ -64,8 +69,8 @@ public class StatusEffect implements Keyed, Resolver {
         this.stackType = StackType.valueOf(section.getString("stack-type", "NORMAL").toUpperCase(Locale.ROOT));
 
         this.display = (section.isConfigurationSection("display"))
-                ? new EffectDisplay(section.getConfigurationSection("display"))
-                : null;
+            ? new EffectDisplay(section.getConfigurationSection("display"))
+            : null;
     }
 
     @Override
@@ -75,6 +80,14 @@ public class StatusEffect implements Keyed, Resolver {
 
     public Component getName() {
         return name;
+    }
+
+    public Component getDescription() {
+        return description;
+    }
+
+    public boolean hasStats() {
+        return !stats.isEmpty();
     }
 
     public Map<StatKey, StatValue> getStats() {
@@ -104,9 +117,10 @@ public class StatusEffect implements Keyed, Resolver {
     @Override
     public TagResolver getResolver() {
         TagResolver.Builder resolver = TagResolver.builder()
-                .resolver(Placeholder.parsed("max-stacks", getMaxStacks() + ""))
-                .resolver(Placeholder.component("name", name))
-                .resolver(Placeholder.parsed("stack-type", WordUtils.capitalize(stackType.name().toLowerCase(Locale.ROOT))));
+            .resolver(Placeholder.parsed("max-stacks", getMaxStacks() + ""))
+            .resolver(Placeholder.component("name", name))
+            .resolver(Placeholder.component("description", description))
+            .resolver(Placeholder.parsed("stack-type", WordUtils.capitalize(stackType.name().toLowerCase(Locale.ROOT))));
 
         return resolver.build();
     }

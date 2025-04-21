@@ -21,6 +21,10 @@ public class StatValue {
         }
     }
 
+    public StatValue(double value) {
+        this(value, ValueType.FLAT);
+    }
+
     public StatValue(double value, @NotNull ValueType type) {
         this.value = value;
         this.type = type;
@@ -37,10 +41,10 @@ public class StatValue {
     @Override
     public @NotNull String toString() {
         return String.valueOf(
-                switch (type) {
-                    case FLAT -> value;
-                    case RELATIVE -> value + '%';
-                }
+            switch (type) {
+                case FLAT -> value;
+                case RELATIVE -> value + '%';
+            }
         );
     }
 

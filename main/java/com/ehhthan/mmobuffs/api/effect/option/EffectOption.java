@@ -19,4 +19,8 @@ public enum EffectOption {
     public boolean defValue() {
         return def;
     }
+
+    public String path() {
+        return name().toLowerCase(Locale.ROOT).replace('_', '-');
+    }
 }
