@@ -1,36 +1,46 @@
 package com.ehhthan.mmobuffs.api.effect.stack;
 
-import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
-
 public enum StackType {
-    NORMAL {
-        public boolean tick(ActiveStatusEffect effect) {
-            effect.setStacks(0); effect.deactivate(); return false;
-        }
-    },
-    CASCADING {
-        public boolean tick(ActiveStatusEffect effect) {
-            effect.setStacks(effect.getStacks() - 1);
-            if (effect.getStacks() <= 0) { effect.deactivate(); return false; }
-            effect.setDuration(effect.getStartDuration()); return true;
-        }
-    },
-    TIMESTACK {
-        public boolean tick(ActiveStatusEffect effect) {
-            effect.setStacks(effect.getStacks() - 1);
-            if (effect.getStacks() <= 0) { effect.deactivate(); return false; }
-            effect.setDuration(effect.getStartDuration()); return true;
-        }
-    },
-    ATTACK {
-        public boolean tick(ActiveStatusEffect effect) {
-            effect.setStacks(effect.getStacks() - 1);
-            if (effect.getStacks() <= 0) effect.deactivate();
-            return false;
-        }
-    },
-    HURT { public boolean tick(ActiveStatusEffect effect) { return ATTACK.tick(effect); } },
-    COMBAT { public boolean tick(ActiveStatusEffect effect) { return ATTACK.tick(effect); } };
+    /**
+     * When the effect duration expires, remove all stacks from the player.
+     * This stack type will multiply <value> by the number of stacks.
+     * Use this as default if not specified in the command.
+     */
+    NORMAL,
 
-    public abstract boolean tick(ActiveStatusEffect effect);
+    /**
+     * When the effect duration expires, remove one stack and then refresh the
+     * duration. Repeat until no stacks are remaining. This stack type will
+     * multiply <value> by the number of stacks.
+     */
+    CASCADING,
+
+    /**
+     * When the effect duration expires, remove one stack and then refresh the
+     * duration. Repeat until no stacks are remaining. This stack type does not
+     * multiply <value>.
+     */
+    TIMESTACK,
+
+    /**
+     * Removes a stack when the player attacks something. If no stacks are remaining,
+     * the effect is removed. All stacks are removed if the effect duration runs out
+     * naturally. This stack type does not multiply <value>.
+     */
+    ATTACK,
+
+    /**
+     * Removes a stack when the player is damaged by something. If no stacks are remaining,
+     * the effect is removed. All stacks are removed if the effect duration runs out naturally.
+     * This stack type does not multiply <value>.
+     */
+    HURT,
+
+    /**
+     * Removes a stack if the player both attacks something or damages something. (Basically
+     * onAttack and onHit combined). Removed if duration runs out, and also does not multiply <value>
+     */
+    COMBAT
+
+    // TODO: 1/6/2022 Concurrent stack type -> stacks time down at all at the same time.
 }

@@ -93,7 +93,7 @@ public class EffectHolder implements PersistentDataHolder {
             }
 
             List<ActiveStatusEffect> sortedEffects = new LinkedList<>(effects.values().stream().filter(e -> e.getStatusEffect().hasDisplay()).sorted().toList());
-            if (!sortedEffects.isEmpty()) {
+            if (sortedEffects.size() > 0) {
                 TextComponent.Builder builder = Component.text();
                 // Checks if the effects should be descending and reverses.
                 if (!config.getBoolean("sorting.duration-ascending", true))

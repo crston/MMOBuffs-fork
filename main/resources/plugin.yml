@@ -2,5 +2,11 @@ name: MMOBuffs
 version: '20250421-fork'
 main: com.ehhthan.mmobuffs.MMOBuffs
 api-version: 1.17
+authors: [Ehhthan]
 soft-depend: [PlaceholderAPI, MythicLib, AureliumSkills]
-authors: [ Ehhthan ]
+
+commands:
+  mmobuffs:
+    description: Main command for MMOBuffs
+    usage: /<command>
+    aliases: [mmobuff, buffs, buff]
