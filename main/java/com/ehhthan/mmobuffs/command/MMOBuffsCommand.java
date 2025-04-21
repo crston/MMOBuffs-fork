@@ -61,7 +61,8 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
         EffectHolder holder = EffectHolder.get(target);
         sender.sendMessage("[Effects List]");
         holder.getEffects(true).forEach(effect ->
-                sender.sendMessage("- " + effect.getStatusEffect().getKey().getKey() + " (Duration: " + effect.getDuration() + ", Stacks: " + effect.getStacks() + ")")
+                sender.sendMessage("- " + effect.getStatusEffect().getKey().getKey() +
+                        " (Duration: " + effect.getDuration() + ", Stacks: " + effect.getStacks() + ")")
         );
     }
 
@@ -190,26 +191,39 @@ public class MMOBuffsCommand implements CommandExecutor, TabCompleter {
     @Override
     public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, String[] args) {
         if (args.length == 1) {
-            return List.of("reload", "give", "list", "clear", "permanent");
+            return filterPrefix(args[0], List.of("reload", "give", "list", "clear", "permanent"));
         }
 
         if (args.length == 2 && List.of("give", "permanent", "clear").contains(args[0].toLowerCase(Locale.ROOT))) {
             return null; // Let Bukkit complete player names
         }
 
-        if (args.length == 3 && (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("permanent") || args[0].equalsIgnoreCase("clear"))) {
+        if (args.length == 3 && List.of("give", "permanent", "clear").contains(args[0].toLowerCase(Locale.ROOT))) {
             List<String> ids = new ArrayList<>();
             for (NamespacedKey key : plugin.getEffectManager().keys()) {
                 ids.add(key.getKey());
             }
-            if (args[0].equalsIgnoreCase("clear")) ids.add("all");
-            return ids;
+            if (args[0].equalsIgnoreCase("clear")) {
+                ids.add("all");
+            }
+            return filterPrefix(args[2], ids);
         }
 
         if (args.length == 4 && args[0].equalsIgnoreCase("give")) {
-            return List.of("10", "30", "60", "120");
+            return filterPrefix(args[3], List.of("10", "30", "60", "120"));
         }
 
         return Collections.emptyList();
+    }
+
+    private List<String> filterPrefix(String input, List<String> options) {
+        String lower = input.toLowerCase(Locale.ROOT);
+        List<String> result = new ArrayList<>();
+        for (String option : options) {
+            if (option.toLowerCase(Locale.ROOT).startsWith(lower)) {
+                result.add(option);
+            }
+        }
+        return result;
     }
 }
