@@ -8,6 +8,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
 public class ActiveEffectsTag implements PersistentDataType<PersistentDataContainer[], ActiveStatusEffect[]> {
+
     @Override
     public @NotNull Class<PersistentDataContainer[]> getPrimitiveType() {
         return PersistentDataContainer[].class;
@@ -18,33 +19,25 @@ public class ActiveEffectsTag implements PersistentDataType<PersistentDataContai
         return ActiveStatusEffect[].class;
     }
 
-    @NotNull
     @Override
-    public PersistentDataContainer @NotNull [] toPrimitive(ActiveStatusEffect[] complex, @NotNull PersistentDataAdapterContext context) {
-        PersistentDataContainer[] primitive = new PersistentDataContainer[complex.length];
-
-        for (int i = 0; i < complex.length; i++) {
-            primitive[i] = CustomTagTypes.ACTIVE_EFFECT.toPrimitive(complex[i], context);
-
+    public @NotNull PersistentDataContainer @NotNull [] toPrimitive(ActiveStatusEffect[] effects, @NotNull PersistentDataAdapterContext context) {
+        PersistentDataContainer[] containers = new PersistentDataContainer[effects.length];
+        for (int i = 0; i < effects.length; i++) {
+            containers[i] = CustomTagTypes.ACTIVE_EFFECT.toPrimitive(effects[i], context);
         }
-
-        return primitive;
+        return containers;
     }
 
-    @NotNull
     @Override
-    public ActiveStatusEffect @NotNull [] fromPrimitive(PersistentDataContainer[] primitive, @NotNull PersistentDataAdapterContext context) {
-        ActiveStatusEffect[] complex = new ActiveStatusEffect[primitive.length];
-
-        for (int i = 0; i < primitive.length; i++) {
+    public @NotNull ActiveStatusEffect @NotNull [] fromPrimitive(PersistentDataContainer[] containers, @NotNull PersistentDataAdapterContext context) {
+        ActiveStatusEffect[] effects = new ActiveStatusEffect[containers.length];
+        for (int i = 0; i < containers.length; i++) {
             try {
-                complex[i] = CustomTagTypes.ACTIVE_EFFECT.fromPrimitive(primitive[i], context);
+                effects[i] = CustomTagTypes.ACTIVE_EFFECT.fromPrimitive(containers[i], context);
             } catch (IllegalArgumentException e) {
-                complex[i] = null;
+                effects[i] = null;
             }
-
         }
-
-        return complex;
+        return effects;
     }
 }

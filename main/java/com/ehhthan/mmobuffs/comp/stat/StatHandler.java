@@ -8,11 +8,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface StatHandler<P> {
+
     @NotNull String namespace();
 
     @Nullable P adapt(@NotNull EffectHolder holder);
 
-    void add(@NotNull EffectHolder holder, @NotNull ActiveStatusEffect effect, @NotNull StatKey key, @NotNull StatValue value);
+    void add(@NotNull EffectHolder holder,
+             @NotNull ActiveStatusEffect effect,
+             @NotNull StatKey key,
+             @NotNull StatValue value);
 
     void remove(@NotNull EffectHolder holder, @NotNull StatKey key);
 

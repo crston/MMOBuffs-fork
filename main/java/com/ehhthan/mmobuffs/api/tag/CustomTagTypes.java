@@ -9,10 +9,11 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
-public interface CustomTagTypes {
-    PersistentDataType<Byte, Boolean> BOOLEAN = new BooleanTag();
-    PersistentDataType<String, NamespacedKey> NAMESPACED_KEY = new NamespacedKeyTag();
+public final class CustomTagTypes {
+    public static final PersistentDataType<Byte, Boolean> BOOLEAN = new BooleanTag();
+    public static final PersistentDataType<String, NamespacedKey> NAMESPACED_KEY = new NamespacedKeyTag();
+    public static final PersistentDataType<PersistentDataContainer, ActiveStatusEffect> ACTIVE_EFFECT = new ActiveEffectTag();
+    public static final PersistentDataType<PersistentDataContainer[], ActiveStatusEffect[]> ACTIVE_EFFECTS = new ActiveEffectsTag();
 
-    PersistentDataType<PersistentDataContainer, ActiveStatusEffect> ACTIVE_EFFECT = new ActiveEffectTag();
-    PersistentDataType<PersistentDataContainer[], ActiveStatusEffect[]> ACTIVE_EFFECTS = new ActiveEffectsTag();
+    private CustomTagTypes() {}
 }

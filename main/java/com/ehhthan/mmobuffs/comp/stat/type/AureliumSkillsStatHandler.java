@@ -15,48 +15,45 @@ import org.jetbrains.annotations.Nullable;
 public class AureliumSkillsStatHandler implements StatHandler<PlayerData> {
     private static final String NAMESPACE = "aureliumskills";
 
-    @NotNull
     @Override
-    public String namespace() {
+    public @NotNull String namespace() {
         return NAMESPACE;
     }
 
-    @Nullable
     @Override
-    public PlayerData adapt(@NotNull EffectHolder holder) {
+    public @Nullable PlayerData adapt(@NotNull EffectHolder holder) {
         return AureliumAPI.getPlugin().getPlayerManager().getPlayerData(holder.getPlayer());
     }
 
     @Override
-    public void add(@NotNull EffectHolder holder, @NotNull ActiveStatusEffect effect, @NotNull StatKey key, @NotNull StatValue value) {
-        PlayerData adapted = adapt(holder);
-        if (adapted != null) {
-            double modifierValue = switch (effect.getStatusEffect().getStackType()) {
-                case NORMAL, CASCADING -> value.getValue() * effect.getStacks();
-                default -> value.getValue();
-            };
+    public void add(@NotNull EffectHolder holder, @NotNull ActiveStatusEffect effect,
+                    @NotNull StatKey key, @NotNull StatValue value) {
+        PlayerData data = adapt(holder);
+        if (data == null) return;
 
-            Stat stat = AureliumAPI.getPlugin().getStatRegistry().getStat(key.getStat());
-            if (stat != null)
-                adapted.addStatModifier(new StatModifier(key.toString(), stat, modifierValue));
+        double modifiedValue = switch (effect.getStatusEffect().getStackType()) {
+            case NORMAL, CASCADING -> value.getValue() * effect.getStacks();
+            default -> value.getValue();
+        };
+
+        Stat stat = AureliumAPI.getPlugin().getStatRegistry().getStat(key.getStat());
+        if (stat != null) {
+            data.addStatModifier(new StatModifier(key.toString(), stat, modifiedValue));
         }
     }
 
     @Override
     public void remove(@NotNull EffectHolder holder, @NotNull StatKey key) {
-        PlayerData adapted = adapt(holder);
-        if (adapted != null) {
-            adapted.removeStatModifier(key.toString());
+        PlayerData data = adapt(holder);
+        if (data != null) {
+            data.removeStatModifier(key.toString());
         }
     }
 
-    @NotNull
     @Override
-    public String getValue(@NotNull EffectHolder holder, @NotNull StatKey key) {
-        PlayerData adapted = adapt(holder);
-        if (adapted != null) {
-            return String.valueOf(adapted.getStatModifier(key.toString()).getValue());
-        }
-        return "0";
+    public @NotNull String getValue(@NotNull EffectHolder holder, @NotNull StatKey key) {
+        PlayerData data = adapt(holder);
+        if (data == null || data.getStatModifier(key.toString()) == null) return "0";
+        return String.valueOf(data.getStatModifier(key.toString()).getValue());
     }
 }

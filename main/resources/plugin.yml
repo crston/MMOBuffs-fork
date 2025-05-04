@@ -1,12 +1,6 @@
 name: MMOBuffs
-version: '20250421-fork'
+version: 20250504fork
 main: com.ehhthan.mmobuffs.MMOBuffs
-api-version: 1.17
+api-version: 1.19
 authors: [Ehhthan]
-soft-depend: [PlaceholderAPI, MythicLib, AureliumSkills]
-
-commands:
-  mmobuffs:
-    description: Main command for MMOBuffs
-    usage: /<command>
-    aliases: [mmobuff, buffs, buff]
+description: A customizable buff and debuff system.

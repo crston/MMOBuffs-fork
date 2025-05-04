@@ -11,7 +11,6 @@ import org.apache.commons.lang.StringEscapeUtils;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
-import org.intellij.lang.annotations.Subst;
 import org.jetbrains.annotations.NotNull;
 
 public class EffectDisplay {
@@ -20,7 +19,7 @@ public class EffectDisplay {
 
     public EffectDisplay(@NotNull ConfigurationSection section) {
         this.icon = section.getString("icon", "");
-        this.text = section.getString("text","<icon> <duration>");
+        this.text = section.getString("text", "<icon> <duration>");
     }
 
     public String getIcon() {
@@ -32,16 +31,24 @@ public class EffectDisplay {
     }
 
     public Component build(@NotNull Player player, @NotNull ActiveStatusEffect effect) {
-        TagResolver resolver = TagResolver.builder().resolver(effect.getResolver()).resolver(Placeholder.parsed("icon", StringEscapeUtils.unescapeJava(icon))).build();
+        String parsedIcon = StringEscapeUtils.unescapeJava(icon);
+        String parsedText = StringEscapeUtils.unescapeJava(text);
 
-        Component parsed = MiniMessage.miniMessage().deserialize((MMOBuffs.getInst().getParserManager().parse(player, StringEscapeUtils.unescapeJava(text))), resolver);
+        TagResolver resolver = TagResolver.builder()
+                .resolver(effect.getResolver())
+                .resolver(Placeholder.parsed("icon", parsedIcon))
+                .build();
+
+        Component component = MiniMessage.miniMessage().deserialize(
+                MMOBuffs.getInst().getParserManager().parse(player, parsedText), resolver
+        );
 
         FileConfiguration config = MMOBuffs.getInst().getConfig();
         if (config.getBoolean("resource-pack.enabled")) {
-            @Subst("mmobuffs:default") String font = config.getString("resource-pack.font", "mmobuffs:default");
-            parsed = parsed.style(parsed.style().font(Key.key(font)));
+            String font = config.getString("resource-pack.font", "mmobuffs:default");
+            component = component.style(component.style().font(Key.key(font)));
         }
 
-        return parsed;
+        return component;
     }
 }

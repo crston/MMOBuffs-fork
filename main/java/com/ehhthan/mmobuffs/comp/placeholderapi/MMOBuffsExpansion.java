@@ -11,7 +11,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
-import java.util.Objects;
 
 public class MMOBuffsExpansion extends PlaceholderExpansion {
     private final MMOBuffs plugin;
@@ -27,7 +26,7 @@ public class MMOBuffsExpansion extends PlaceholderExpansion {
 
     @Override
     public @NotNull String getAuthor() {
-        return plugin.getDescription().getAuthors().toString();
+        return String.join(", ", plugin.getDescription().getAuthors());
     }
 
     @Override
@@ -37,85 +36,70 @@ public class MMOBuffsExpansion extends PlaceholderExpansion {
 
     @Override
     public @Nullable String onRequest(OfflinePlayer player, @NotNull String params) {
-        // Check if the effect holder is loaded and contains the player.
-        // Fixes NightFury's issue:
-        // java.lang.NullPointerException: Cannot invoke ... because "holder" is null
-        if (player != null && player.isOnline() && EffectHolder.has(player.getPlayer())) {
-            EffectHolder holder = EffectHolder.get(player.getPlayer());
+        if (player == null || !player.isOnline()) return null;
+        if (!EffectHolder.has(player.getPlayer())) return null;
 
-            String[] split = params.split("_", 2);
+        EffectHolder holder = EffectHolder.get(player.getPlayer());
+        String[] split = params.split("_", 2);
+        if (split.length != 2) return null;
 
-            if (split.length == 2) {
-                String option = split[0].toLowerCase(Locale.ROOT);
-                NamespacedKey key = NamespacedKey.fromString(split[1].toLowerCase(Locale.ROOT), plugin);
+        String option = split[0].toLowerCase(Locale.ROOT);
+        NamespacedKey key = NamespacedKey.fromString(split[1].toLowerCase(Locale.ROOT), plugin);
+        if (key == null) return "0";
 
-                switch (option) {
-                    case "name" -> {
-                        if (MMOBuffs.getInst().getEffectManager().has(key))
-                            return PlainTextComponentSerializer.plainText().serialize(MMOBuffs.getInst().getEffectManager().get(key).getName());
-                        else
-                            return "";
+        switch (option) {
+            case "name" -> {
+                if (plugin.getEffectManager().has(key))
+                    return PlainTextComponentSerializer.plainText().serialize(plugin.getEffectManager().get(key).getName());
+                return "";
+            }
+            case "has" -> {
+                return String.valueOf(holder.hasEffect(key));
+            }
+            case "duration" -> {
+                return holder.hasEffect(key)
+                        ? PlainTextComponentSerializer.plainText().serialize(holder.getEffect(key).getDurationDisplay().display())
+                        : "0";
+            }
+            case "seconds" -> {
+                return holder.hasEffect(key)
+                        ? String.valueOf(holder.getEffect(key).getDuration())
+                        : "0";
+            }
+            case "stacks" -> {
+                return holder.hasEffect(key)
+                        ? String.valueOf(holder.getEffect(key).getStacks())
+                        : "0";
+            }
+            case "maxstacks" -> {
+                return holder.hasEffect(key)
+                        ? String.valueOf(holder.getEffect(key).getStatusEffect().getMaxStacks())
+                        : "0";
+            }
+            default -> {
+                String[] optionSplit = split[1].split("_", 2);
+                if (optionSplit.length != 2) return "0";
+
+                String[] statSplit = optionSplit[0].split(":", 2);
+                key = NamespacedKey.fromString(optionSplit[1].toLowerCase(Locale.ROOT), plugin);
+                if (key == null || !holder.hasEffect(key)) return "0";
+
+                StatKey statKey = switch (statSplit.length) {
+                    case 1 -> new StatKey(plugin.getEffectManager().get(key), statSplit[0]);
+                    case 2 -> new StatKey(plugin.getEffectManager().get(key), statSplit[1], statSplit[0]);
+                    default -> null;
+                };
+                if (statKey == null) return "0";
+
+                return switch (option) {
+                    case "value" -> plugin.getStatManager().getValue(holder, statKey);
+                    case "basevalue" -> {
+                        var value = holder.getEffect(key).getStatusEffect().getStats().get(statKey);
+                        yield value != null ? value.toString() : "0";
                     }
-                    case "has" -> {
-                        return String.valueOf(holder.hasEffect(key));
-                    }
-
-                    case "duration" -> {
-                        if (holder.hasEffect(key))
-                            return PlainTextComponentSerializer.plainText().serialize(Objects.requireNonNull(holder.getEffect(key)).getDurationDisplay().display());
-                        else
-                            return "0";
-                    }
-
-                    case "seconds" -> {
-                        if (holder.hasEffect(key))
-                            return Objects.requireNonNull(holder.getEffect(key)).getDuration() + "";
-                        else
-                            return "0";
-                    }
-
-                    case "stacks" -> {
-                        if (holder.hasEffect(key))
-                            return String.valueOf(Objects.requireNonNull(holder.getEffect(key)).getStacks());
-                        else
-                            return "0";
-                    }
-
-                    case "maxstacks" -> {
-                        if (holder.hasEffect(key))
-                            return String.valueOf(Objects.requireNonNull(holder.getEffect(key)).getStatusEffect().getMaxStacks());
-                        else
-                            return "0";
-                    }
-
-                    default -> {
-                        String[] optionSplit = split[1].split("_", 2);
-                        String[] statSplit = optionSplit[0].split(":", 2);
-                        if (optionSplit.length == 2) {
-                            key = NamespacedKey.fromString(optionSplit[1].toLowerCase(Locale.ROOT), plugin);
-                            if (key != null && holder.hasEffect(key)) {
-                                StatKey statKey;
-                                if (statSplit.length == 1)
-                                    statKey = new StatKey(plugin.getEffectManager().get(key), statSplit[0]);
-                                else if (statSplit.length == 2)
-                                    statKey = new StatKey(plugin.getEffectManager().get(key), statSplit[1], statSplit[0]);
-                                else
-                                    return "0";
-                                switch (option) {
-                                    case "value" -> {
-                                        return plugin.getStatManager().getValue(holder, statKey);
-                                    }
-                                    case "basevalue" -> {
-                                        return Objects.requireNonNull(holder.getEffect(key)).getStatusEffect().getStats().get(statKey).toString();
-                                    }
-                                }
-                            } else
-                                return "0";
-                        }
-                    }
-                }
+                    default -> "0";
+                };
             }
         }
-        return null;
     }
 }

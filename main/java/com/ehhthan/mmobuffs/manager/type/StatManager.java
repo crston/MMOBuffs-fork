@@ -4,7 +4,6 @@ import com.ehhthan.mmobuffs.MMOBuffs;
 import com.ehhthan.mmobuffs.api.EffectHolder;
 import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
 import com.ehhthan.mmobuffs.api.stat.StatKey;
-import com.ehhthan.mmobuffs.api.stat.StatValue;
 import com.ehhthan.mmobuffs.comp.stat.StatHandler;
 import com.ehhthan.mmobuffs.comp.stat.type.AureliumSkillsStatHandler;
 import com.ehhthan.mmobuffs.comp.stat.type.MythicLibStatHandler;
@@ -33,33 +32,31 @@ public class StatManager {
 
     public void register(StatHandler<?> handler) {
         handlers.put(handler.namespace(), handler);
-        plugin.getLogger().log(Level.INFO, "StatHandler registered successfully: " + handler.namespace());
+        plugin.getLogger().log(Level.INFO, "StatHandler registered: " + handler.namespace());
     }
 
     public void add(EffectHolder holder, ActiveStatusEffect effect) {
-        if (holder != null) {
-            for (Map.Entry<StatKey, StatValue> entry : effect.getStatusEffect().getStats().entrySet()) {
-                getHandler(entry.getKey()).add(holder, effect, entry.getKey(), entry.getValue());
-            }
-        }
+        if (holder == null) return;
+        effect.getStatusEffect().getStats().forEach((key, value) ->
+                getHandler(key).add(holder, effect, key, value));
     }
 
     public void remove(EffectHolder holder, ActiveStatusEffect effect) {
-        if (holder != null) {
-            for (StatKey key : effect.getStatusEffect().getStats().keySet()) {
-                getHandler(key).remove(holder, key);
-            }
-        }
+        if (holder == null) return;
+        effect.getStatusEffect().getStats().keySet().forEach(key ->
+                getHandler(key).remove(holder, key));
     }
 
     public String getValue(EffectHolder holder, StatKey key) {
-        if (holder != null && key != null) {
-            return getHandler(key).getValue(holder, key);
-        }
-        return "0";
+        if (holder == null || key == null) return "0";
+        return getHandler(key).getValue(holder, key);
     }
 
     private StatHandler<?> getHandler(StatKey key) {
-        return handlers.get((key.getPlugin() != null) ? key.getPlugin() : plugin.getConfig().getString("stat-handler.default", "mythiclib"));
+        String pluginKey = key.getPlugin();
+        String selected = pluginKey != null
+                ? pluginKey
+                : plugin.getConfig().getString("stat-handler.default", "mythiclib");
+        return handlers.getOrDefault(selected, handlers.values().stream().findFirst().orElseThrow());
     }
 }

@@ -10,41 +10,38 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
+import java.util.EnumSet;
 
 public class CombatListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
-        if (event.getEntity() instanceof Player p) {
-            call(p, StackType.HURT, StackType.COMBAT);
+        if (event.getEntity() instanceof Player victim) {
+            trigger(victim, StackType.HURT, StackType.COMBAT);
         }
-        if (event.getDamager() instanceof Player p) {
-            call(p, StackType.ATTACK, StackType.COMBAT);
+        if (event.getDamager() instanceof Player attacker) {
+            trigger(attacker, StackType.ATTACK, StackType.COMBAT);
         }
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamageByBlock(EntityDamageByBlockEvent event) {
-        if (event.getEntity() instanceof Player p) {
-            call(p, StackType.HURT);
+        if (event.getEntity() instanceof Player player) {
+            trigger(player, StackType.HURT);
         }
     }
 
-    private void call(Player player, StackType... types) {
-        if (EffectHolder.has(player)) {
-            EffectHolder holder = EffectHolder.get(player);
-            List<StackType> typeList = Arrays.asList(types);
+    private void trigger(Player player, StackType... types) {
+        if (!EffectHolder.has(player)) return;
+        var holder = EffectHolder.get(player);
+        var validTypes = EnumSet.noneOf(StackType.class);
+        validTypes.addAll(java.util.Arrays.asList(types));
 
-            Collection<ActiveStatusEffect> effects = holder.getEffects(true);
-            for (ActiveStatusEffect effect : effects) {
-                StackType type = effect.getStatusEffect().getStackType();
-                if (typeList.contains(type)) {
-                    effect.triggerStack(type);
-                    holder.updateEffect(effect.getStatusEffect().getKey());
-                }
+        for (ActiveStatusEffect effect : holder.getEffects(true)) {
+            StackType type = effect.getStatusEffect().getStackType();
+            if (validTypes.contains(type)) {
+                effect.triggerStack(type);
+                holder.updateEffect(effect.getStatusEffect().getKey());
             }
         }
     }

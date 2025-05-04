@@ -3,6 +3,7 @@ package com.ehhthan.mmobuffs.api.stat;
 import org.jetbrains.annotations.NotNull;
 
 public class StatValue {
+
     private final double value;
     private final ValueType type;
 
@@ -17,7 +18,7 @@ public class StatValue {
         try {
             this.value = Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException("Stat value '" + value + "' is not a valid number.");
+            throw new IllegalArgumentException("Invalid stat value: '" + value + "'");
         }
     }
 
@@ -40,12 +41,10 @@ public class StatValue {
 
     @Override
     public @NotNull String toString() {
-        return String.valueOf(
-            switch (type) {
-                case FLAT -> value;
-                case RELATIVE -> value + '%';
-            }
-        );
+        return switch (type) {
+            case FLAT -> String.valueOf(value);
+            case RELATIVE -> value + "%";
+        };
     }
 
     public enum ValueType {

@@ -10,64 +10,54 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public final class LanguageManager implements Reloadable {
     private ConfigFile language;
-
     private boolean hasWarned = false;
 
     public LanguageManager() {
         reload();
     }
 
+    @Override
     public void reload() {
         this.language = new ConfigFile("/language", "language");
     }
 
-    public String getString(@NotNull String path) {
-        String found = language.getConfig().getString(path);
-
-        if (found != null && (found.isEmpty() || found.equals("[]")))
-            return "";
-
-        return found == null ? "<MNF:" + path + ">" : found;
+    public @NotNull String getString(@NotNull String path) {
+        String result = language.getConfig().getString(path);
+        if (result == null) return "<MNF:" + path + ">";
+        return result.isEmpty() || result.equals("[]") ? "" : result;
     }
 
-    @Nullable
-    public Component getMessage(@NotNull String path) {
+    public @Nullable Component getMessage(@NotNull String path) {
         return getMessage(path, true, null);
     }
 
-    @Nullable
-    public Component getMessage(@NotNull String path, boolean hasPrefix) {
-        return getMessage(path, hasPrefix, null);
+    public @Nullable Component getMessage(@NotNull String path, boolean prefix) {
+        return getMessage(path, prefix, null);
     }
 
-    @Nullable
-    public Component getMessage(@NotNull String path, boolean hasPrefix, @Nullable TagResolver resolver) {
-        String prefix = (hasPrefix) ? language.getConfig().getString("prefix", "") : "";
-        String found = language.getConfig().getString(path);
-
-        if (found != null && (found.isEmpty() || found.equals("[]")))
-            return null;
-
+    public @Nullable Component getMessage(@NotNull String path, boolean prefix, @Nullable TagResolver resolver) {
         String input;
-        if (found == null) {
+        String prefixValue = prefix ? language.getConfig().getString("prefix", "") : "";
+        String message = language.getConfig().getString(path);
+
+        if (message == null) {
             if (!hasWarned) {
-                Logger logger = MMOBuffs.getInst().getLogger();
-                logger.log(Level.WARNING, "Message Missing: " + path);
-                logger.log(Level.WARNING, "You should either add this field yourself to your language.yml or refresh it.");
+                MMOBuffs.getInst().getLogger().log(Level.WARNING, "Missing message: " + path);
+                MMOBuffs.getInst().getLogger().log(Level.WARNING, "Please add it to your language.yml or reset the file.");
                 hasWarned = true;
             }
             input = "<Message-Missing:" + path + ">";
+        } else if (message.isEmpty() || message.equals("[]")) {
+            return null;
         } else {
-            input = prefix + found;
+            input = prefixValue + message;
         }
 
-        if (resolver != null)
-            return MiniMessage.miniMessage().deserialize(input, resolver);
-        else
-            return MiniMessage.miniMessage().deserialize(input);
+        return resolver != null
+                ? MiniMessage.miniMessage().deserialize(input, resolver)
+                : MiniMessage.miniMessage().deserialize(input);
     }
 }

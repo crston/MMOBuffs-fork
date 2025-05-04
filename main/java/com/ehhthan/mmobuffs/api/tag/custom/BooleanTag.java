@@ -17,12 +17,12 @@ public class BooleanTag implements PersistentDataType<Byte, Boolean> {
     }
 
     @Override
-    public @NotNull Byte toPrimitive(@NotNull Boolean complex, @NotNull PersistentDataAdapterContext context) {
-        return (byte)(complex ? 1 : 0);
+    public @NotNull Byte toPrimitive(@NotNull Boolean value, @NotNull PersistentDataAdapterContext context) {
+        return (byte) (value ? 1 : 0);
     }
 
     @Override
-    public @NotNull Boolean fromPrimitive(@NotNull Byte primitive, @NotNull PersistentDataAdapterContext context) {
-        return primitive == 1;
+    public @NotNull Boolean fromPrimitive(@NotNull Byte value, @NotNull PersistentDataAdapterContext context) {
+        return value != 0;
     }
 }

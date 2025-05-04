@@ -13,7 +13,11 @@ public enum EffectOption {
     }
 
     public static EffectOption fromPath(String path) {
-        return valueOf(path.toUpperCase(Locale.ROOT).replace('-','_'));
+        try {
+            return valueOf(path.toUpperCase(Locale.ROOT).replace('-', '_'));
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid effect option: " + path, e);
+        }
     }
 
     public boolean defValue() {

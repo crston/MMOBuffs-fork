@@ -12,36 +12,28 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 
-@SuppressWarnings("ClassCanBeRecord")
 public class TimedDisplay implements DurationDisplay {
-    private static final Function<Duration, Component> LONG_DISPLAY_FORMAT = (duration) -> {
-        List<Component> components = new LinkedList<>();
+    private static final Function<Duration, Component> LONG_FORMAT = duration -> {
+        List<Component> parts = new LinkedList<>();
         for (TimeType type : TimeType.values()) {
-            Component format = type.format(duration);
-            if (format != Component.empty())
-                components.add(format);
+            Component part = type.format(duration);
+            if (!part.equals(Component.empty())) parts.add(part);
         }
 
         Component separator = MMOBuffs.getInst().getLanguageManager().getMessage("duration-display.separator", false);
-
         TextComponent.Builder builder = Component.text();
-        for (int i = 0; i < components.size(); i++) {
-            builder.append(components.get(i));
-            if (separator != null && i != components.size()-1) {
-                builder.append(separator);
-            }
+        for (int i = 0; i < parts.size(); i++) {
+            builder.append(parts.get(i));
+            if (separator != null && i < parts.size() - 1) builder.append(separator);
         }
-
         return builder.build();
     };
 
-    private static final Function<Duration, Component> SHORT_DISPLAY_FORMAT = (duration) -> {
+    private static final Function<Duration, Component> SHORT_FORMAT = duration -> {
         for (TimeType type : TimeType.values()) {
-            Component format = type.format(duration);
-            if (format != Component.empty())
-                return format;
+            Component result = type.format(duration);
+            if (!result.equals(Component.empty())) return result;
         }
-
         return Component.empty();
     };
 
@@ -54,51 +46,34 @@ public class TimedDisplay implements DurationDisplay {
     @Override
     public Component display() {
         Duration duration = Duration.ofSeconds(effect.getDuration());
-        return (MMOBuffs.getInst().getConfig().getBoolean("shorten-duration-display", true))
-            ? SHORT_DISPLAY_FORMAT.apply(duration)
-            : LONG_DISPLAY_FORMAT.apply(duration);
+        boolean shorten = MMOBuffs.getInst().getConfig().getBoolean("shorten-duration-display", true);
+        return shorten ? SHORT_FORMAT.apply(duration) : LONG_FORMAT.apply(duration);
     }
 
-    enum TimeType {
+    private enum TimeType {
         DAYS {
-            @Override
-            int partFromDuration(Duration duration) {
-                return (int) duration.toDaysPart();
-            }
+            int extract(Duration d) { return (int) d.toDaysPart(); }
         },
         HOURS {
-            @Override
-            int partFromDuration(Duration duration) {
-                return duration.toHoursPart();
-            }
+            int extract(Duration d) { return d.toHoursPart(); }
         },
         MINUTES {
-            @Override
-            int partFromDuration(Duration duration) {
-                return duration.toMinutesPart();
-            }
+            int extract(Duration d) { return d.toMinutesPart(); }
         },
         SECONDS {
-            @Override
-            int partFromDuration(Duration duration) {
-                return duration.toSecondsPart();
-            }
+            int extract(Duration d) { return d.toSecondsPart(); }
         };
 
-        private final String id;
+        private final String id = name().toLowerCase(Locale.ROOT);
 
-        TimeType() {
-            id = name().toLowerCase(Locale.ROOT);
-        }
-
-        int partFromDuration(Duration duration) {
-            throw new IllegalArgumentException("This method should be overridden.");
-        }
+        abstract int extract(Duration duration);
 
         Component format(Duration duration) {
-            int value = partFromDuration(duration);
-            return (value > 0) ? MMOBuffs.getInst().getLanguageManager().
-                getMessage("duration-display." + id, false, Placeholder.parsed("value", value + "")) : Component.empty();
+            int value = extract(duration);
+            return value > 0
+                    ? MMOBuffs.getInst().getLanguageManager().getMessage("duration-display." + id, false,
+                    Placeholder.parsed("value", String.valueOf(value)))
+                    : Component.empty();
         }
     }
 }

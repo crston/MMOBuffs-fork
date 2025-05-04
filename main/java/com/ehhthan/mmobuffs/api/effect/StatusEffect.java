@@ -17,60 +17,75 @@ import org.bukkit.configuration.ConfigurationSection;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
 
 public class StatusEffect implements Keyed, Resolver {
+    private static final String DISPLAY_NAME = "display-name";
+    private static final String DESCRIPTION = "description";
+    private static final String STATS = "stats";
+    private static final String OPTIONS = "options";
+    private static final String DISPLAY = "display";
+    private static final String STACK_TYPE = "stack-type";
+    private static final String MAX_STACKS = "max-stacks";
+
     private final NamespacedKey key;
     private final Component name;
     private final Component description;
-
     private final Map<StatKey, StatValue> stats = new LinkedHashMap<>();
     private final Map<EffectOption, Boolean> options = new HashMap<>();
-
     private final int maxStacks;
     private final StackType stackType;
-
-    private final EffectDisplay display;
+    private final Optional<EffectDisplay> display;
 
     @SuppressWarnings("ConstantConditions")
     public StatusEffect(@NotNull ConfigurationSection section) {
-        this.key = NamespacedKey.fromString(section.getName().toLowerCase(Locale.ROOT), MMOBuffs.getInst());
-        this.name = MiniMessage.miniMessage().deserialize(section.getString("display-name", WordUtils.capitalize(key.getKey())));
-        this.description = MiniMessage.miniMessage().deserialize(section.getString("description", ""));
+        this.key = Optional.ofNullable(NamespacedKey.fromString(section.getName().toLowerCase(Locale.ROOT), MMOBuffs.getInst()))
+                .orElseThrow(() -> new IllegalArgumentException("Invalid key for StatusEffect section: " + section.getName()));
 
-        if (section.isConfigurationSection("stats")) {
-            ConfigurationSection statSection = section.getConfigurationSection("stats");
-            for (String stat : statSection.getKeys(false)) {
-                String[] split = stat.split(":", 2);
+        this.name = MiniMessage.miniMessage().deserialize(
+                section.getString(DISPLAY_NAME, WordUtils.capitalize(key.getKey()))
+        );
 
-                StatKey statKey;
-                if (split.length == 1)
-                    statKey = new StatKey(this, split[0]);
-                else if (split.length == 2)
-                    statKey = new StatKey(this, split[1], split[0]);
-                else
-                    continue;
+        this.description = MiniMessage.miniMessage().deserialize(
+                section.getString(DESCRIPTION, "")
+        );
 
-                stats.put(statKey, new StatValue(statSection.getString(stat)));
+        loadStats(section.getConfigurationSection(STATS));
+        loadOptions(section.getConfigurationSection(OPTIONS));
+
+        this.maxStacks = section.getInt(MAX_STACKS, 1);
+        this.stackType = parseStackType(section.getString(STACK_TYPE));
+        this.display = Optional.ofNullable(section.getConfigurationSection(DISPLAY)).map(EffectDisplay::new);
+    }
+
+    private void loadStats(@Nullable ConfigurationSection section) {
+        if (section == null) return;
+        for (String stat : section.getKeys(false)) {
+            String[] split = stat.split(":", 2);
+            StatKey statKey = switch (split.length) {
+                case 1 -> new StatKey(this, split[0]);
+                case 2 -> new StatKey(this, split[1], split[0]);
+                default -> null;
+            };
+            if (statKey != null) {
+                stats.put(statKey, new StatValue(Objects.requireNonNull(section.getString(stat))));
             }
         }
+    }
 
-        if (section.isConfigurationSection("options")) {
-            ConfigurationSection optionSection = section.getConfigurationSection("options");
-            for (String key : optionSection.getKeys(false)) {
-                options.put(EffectOption.fromPath(key), optionSection.getBoolean(key));
-            }
+    private void loadOptions(@Nullable ConfigurationSection section) {
+        if (section == null) return;
+        for (String key : section.getKeys(false)) {
+            options.put(EffectOption.fromPath(key), section.getBoolean(key));
         }
+    }
 
-        this.maxStacks = section.getInt("max-stacks", 1);
-        this.stackType = StackType.valueOf(section.getString("stack-type", "NORMAL").toUpperCase(Locale.ROOT));
-
-        this.display = (section.isConfigurationSection("display"))
-            ? new EffectDisplay(section.getConfigurationSection("display"))
-            : null;
+    private StackType parseStackType(@Nullable String type) {
+        try {
+            return StackType.valueOf(Optional.ofNullable(type).orElse("NORMAL").toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return StackType.NORMAL;
+        }
     }
 
     @Override
@@ -107,21 +122,20 @@ public class StatusEffect implements Keyed, Resolver {
     }
 
     public boolean hasDisplay() {
-        return display != null;
+        return display.isPresent();
     }
 
-    public @Nullable EffectDisplay getDisplay() {
+    public Optional<EffectDisplay> getDisplay() {
         return display;
     }
 
     @Override
     public TagResolver getResolver() {
-        TagResolver.Builder resolver = TagResolver.builder()
-            .resolver(Placeholder.parsed("max-stacks", getMaxStacks() + ""))
-            .resolver(Placeholder.component("name", name))
-            .resolver(Placeholder.component("description", description))
-            .resolver(Placeholder.parsed("stack-type", WordUtils.capitalize(stackType.name().toLowerCase(Locale.ROOT))));
-
-        return resolver.build();
+        return TagResolver.builder()
+                .resolver(Placeholder.parsed("max-stacks", String.valueOf(maxStacks)))
+                .resolver(Placeholder.component("name", name))
+                .resolver(Placeholder.component("description", description))
+                .resolver(Placeholder.parsed("stack-type", WordUtils.capitalize(stackType.name().toLowerCase(Locale.ROOT))))
+                .build();
     }
 }
