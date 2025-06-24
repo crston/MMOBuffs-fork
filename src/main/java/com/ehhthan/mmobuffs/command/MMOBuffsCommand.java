@@ -52,7 +52,7 @@ public class MMOBuffsCommand extends BaseCommand {
         respond(sender, "give-effect", eff, holder, silent);
     }
 
-    @Subcommand("perm")
+    @Subcommand("permanent|perm")
     @CommandPermission("mmobuffs.permanent")
     @CommandCompletion("@players @effects * @range:1-9 * -s")
     @Syntax("<player> <effect> [duration-modifier] [stacks] [stack-modifier] [-s]")
