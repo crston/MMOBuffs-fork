@@ -1,0 +1,11 @@
+name: MMOBuffs
+version: '20250421-fork'
+main: com.ehhthan.mmobuffs.MMOBuffs
+api-version: 1.17
+softdepend: [PlaceholderAPI]
+commands:
+  mmobuffs:
+    description: Main command for MMOBuffs
+    usage: /<command>
+    permission: mmobuffs.use
+authors: [Ehhthan]
