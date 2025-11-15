@@ -1,6 +1,6 @@
 name: MMOBuffs
-version: 20251115-fork
+version: 20251115fork
 main: com.ehhthan.mmobuffs.MMOBuffs
 api-version: 1.19
-authors: [Ehhthan]
+authors: [Ehhthan, fork - crston]
 description: A customizable buff and debuff system.

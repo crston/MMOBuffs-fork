@@ -15,7 +15,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Locale;
 
-public final class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
+public class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
 
     private static final String NAMESPACE = "mythiclib";
 
@@ -30,14 +30,10 @@ public final class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
     }
 
     @Override
-    public void add(@NotNull EffectHolder holder,
-                    @NotNull ActiveStatusEffect effect,
-                    @NotNull StatKey key,
-                    @NotNull StatValue value) {
+    public void add(@NotNull EffectHolder holder, @NotNull ActiveStatusEffect effect,
+                    @NotNull StatKey key, @NotNull StatValue value) {
         MMOPlayerData data = adapt(holder);
-        if (data == null) {
-            return;
-        }
+        if (data == null) return;
 
         double amount = switch (effect.getStatusEffect().getStackType()) {
             case NORMAL, CASCADING -> value.getValue() * effect.getStacks();
@@ -45,55 +41,35 @@ public final class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
         };
 
         String stat = key.getStat().toUpperCase(Locale.ROOT);
-
-        StatModifier modifier = new StatModifier(
-                key.toString(),
-                stat,
-                amount,
-                adaptModifier(value.getType()),
-                EquipmentSlot.OTHER,
-                ModifierSource.OTHER
+        data.getStatMap().getInstance(stat).registerModifier(
+                new StatModifier(
+                        key.getUUID(),
+                        key.toString(),
+                        stat,
+                        amount,
+                        adaptModifier(value.getType()),
+                        EquipmentSlot.OTHER,
+                        ModifierSource.OTHER
+                )
         );
-
-        var instance = data.getStatMap().getInstance(stat);
-        if (instance == null) {
-            return;
-        }
-        instance.addModifier(modifier);
     }
 
     @Override
-    public void remove(@NotNull EffectHolder holder,
-                       @NotNull StatKey key) {
+    public void remove(@NotNull EffectHolder holder, @NotNull StatKey key) {
         MMOPlayerData data = adapt(holder);
-        if (data == null) {
-            return;
+        if (data != null) {
+            data.getStatMap().getInstance(key.getStat().toUpperCase(Locale.ROOT)).removeModifier(key.getUUID());
         }
-        String stat = key.getStat().toUpperCase(Locale.ROOT);
-        var instance = data.getStatMap().getInstance(stat);
-        if (instance == null) {
-            return;
-        }
-        instance.remove(key.toString());
     }
 
     @Override
-    public @NotNull String getValue(@NotNull EffectHolder holder,
-                                    @NotNull StatKey key) {
+    public @NotNull String getValue(@NotNull EffectHolder holder, @NotNull StatKey key) {
         MMOPlayerData data = adapt(holder);
-        if (data == null) {
-            return "0";
+        if (data != null) {
+            StatModifier modifier = data.getStatMap().getInstance(key.getStat()).getModifier(key.getUUID());
+            if (modifier != null) return modifier.toString();
         }
-        String stat = key.getStat().toUpperCase(Locale.ROOT);
-        var instance = data.getStatMap().getInstance(stat);
-        if (instance == null) {
-            return "0";
-        }
-        StatModifier modifier = instance.getModifier(key.toString());
-        if (modifier == null) {
-            return "0";
-        }
-        return modifier.toString();
+        return "0";
     }
 
     private ModifierType adaptModifier(StatValue.ValueType type) {

@@ -10,9 +10,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
-public final class CombatListener implements Listener {
+public class CombatListener implements Listener {
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player victim) {
             trigger(victim, StackType.HURT, StackType.COMBAT);
@@ -22,7 +22,7 @@ public final class CombatListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.MONITOR)
     public void onEntityDamageByBlock(EntityDamageByBlockEvent event) {
         if (event.getEntity() instanceof Player player) {
             trigger(player, StackType.HURT);
@@ -35,27 +35,17 @@ public final class CombatListener implements Listener {
         }
 
         EffectHolder holder = EffectHolder.get(player);
-        if (holder == null) {
-            return;
-        }
 
+        outer:
         for (ActiveStatusEffect effect : holder.getEffects(true)) {
             StackType type = effect.getStatusEffect().getStackType();
-            boolean match = false;
-
             for (StackType t : types) {
                 if (t == type) {
-                    match = true;
-                    break;
+                    effect.triggerStack(type);
+                    holder.updateEffect(effect.getStatusEffect().getKey());
+                    continue outer;
                 }
             }
-
-            if (!match) {
-                continue;
-            }
-
-            effect.triggerStack(type);
-            holder.updateEffect(effect.getStatusEffect().getKey());
         }
     }
 }

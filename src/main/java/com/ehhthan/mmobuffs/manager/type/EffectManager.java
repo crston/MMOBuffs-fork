@@ -5,6 +5,7 @@ import com.ehhthan.mmobuffs.manager.ConfigFile;
 import com.ehhthan.mmobuffs.manager.KeyedManager;
 import com.ehhthan.mmobuffs.manager.Reloadable;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.FileConfiguration;
 
 public final class EffectManager extends KeyedManager<StatusEffect> implements Reloadable {
 
@@ -19,7 +20,8 @@ public final class EffectManager extends KeyedManager<StatusEffect> implements R
         clear();
 
         ConfigFile configFile = new ConfigFile(EFFECTS_FILE_NAME);
-        ConfigurationSection root = configFile.getConfig();
+        FileConfiguration cfg = configFile.getConfig();
+        ConfigurationSection root = cfg;
         if (root == null) {
             error("Root", new IllegalStateException("Missing root configuration section in effects.yml"));
             return;
@@ -28,7 +30,7 @@ public final class EffectManager extends KeyedManager<StatusEffect> implements R
         for (String key : root.getKeys(false)) {
             ConfigurationSection section = root.getConfigurationSection(key);
             if (section == null) {
-                error(key, new IllegalArgumentException("Missing configuration section for key: " + key));
+                error(key, new IllegalArgumentException("Missing configuration section for key " + key));
                 continue;
             }
 

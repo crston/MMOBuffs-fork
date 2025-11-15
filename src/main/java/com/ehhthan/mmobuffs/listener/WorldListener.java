@@ -1,8 +1,8 @@
 package com.ehhthan.mmobuffs.listener;
 
 import com.ehhthan.mmobuffs.api.EffectHolder;
-import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
 import com.ehhthan.mmobuffs.api.effect.option.EffectOption;
+import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -10,7 +10,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 
-public final class WorldListener implements Listener {
+import java.util.ArrayList;
+import java.util.List;
+
+public class WorldListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(EntityDeathEvent event) {
@@ -30,14 +33,16 @@ public final class WorldListener implements Listener {
         }
 
         EffectHolder holder = EffectHolder.get(player);
-        if (holder == null) {
-            return;
+        List<NamespacedKey> removeKeys = new ArrayList<>();
+
+        for (var active : holder.getEffects(true)) {
+            if (!active.getStatusEffect().getOption(option)) {
+                removeKeys.add(active.getStatusEffect().getKey());
+            }
         }
 
-        for (ActiveStatusEffect effect : holder.getEffects(true)) {
-            if (!effect.getStatusEffect().getOption(option)) {
-                holder.removeEffect(effect.getStatusEffect().getKey());
-            }
+        for (NamespacedKey key : removeKeys) {
+            holder.removeEffect(key);
         }
     }
 }

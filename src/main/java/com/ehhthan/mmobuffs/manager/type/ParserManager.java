@@ -5,15 +5,12 @@ import com.ehhthan.mmobuffs.manager.KeylessManager;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-public final class ParserManager extends KeylessManager<Parser> {
+public class ParserManager extends KeylessManager<Parser> {
 
     public String parse(@NotNull Player player, @NotNull String text) {
         String result = text;
         for (Parser parser : managed) {
-            String out = parser.parse(player, result);
-            if (out != null) {
-                result = out;
-            }
+            result = parser.parse(player, result);
         }
         return result;
     }

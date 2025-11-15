@@ -5,7 +5,8 @@ import org.bukkit.NamespacedKey;
 
 public final class KeyUtil {
 
-    private KeyUtil() {}
+    private KeyUtil() {
+    }
 
     public static NamespacedKey key(String key) {
         return new NamespacedKey(MMOBuffs.getInst(), key);

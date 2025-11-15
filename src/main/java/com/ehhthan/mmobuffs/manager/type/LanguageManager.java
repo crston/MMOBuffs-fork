@@ -9,11 +9,14 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.logging.Level;
 
 public final class LanguageManager implements Reloadable {
     private ConfigFile language;
     private boolean hasWarned = false;
+    private final Map<String, Component> messageCache = new HashMap<>();
 
     public LanguageManager() {
         reload();
@@ -22,12 +25,19 @@ public final class LanguageManager implements Reloadable {
     @Override
     public void reload() {
         this.language = new ConfigFile("/language", "language");
+        this.messageCache.clear();
+        this.hasWarned = false;
     }
 
     public @NotNull String getString(@NotNull String path) {
         String result = language.getConfig().getString(path);
-        if (result == null) return "<MNF:" + path + ">";
-        return result.isEmpty() || result.equals("[]") ? "" : result;
+        if (result == null) {
+            return "<MNF:" + path + ">";
+        }
+        if (result.isEmpty() || result.equals("[]")) {
+            return "";
+        }
+        return result;
     }
 
     public @Nullable Component getMessage(@NotNull String path) {
@@ -39,13 +49,13 @@ public final class LanguageManager implements Reloadable {
     }
 
     public @Nullable Component getMessage(@NotNull String path, boolean prefix, @Nullable TagResolver resolver) {
-        String input;
         String prefixValue = prefix ? language.getConfig().getString("prefix", "") : "";
         String message = language.getConfig().getString(path);
+        String input;
 
         if (message == null) {
             if (!hasWarned) {
-                MMOBuffs.getInst().getLogger().log(Level.WARNING, "Missing message: " + path);
+                MMOBuffs.getInst().getLogger().log(Level.WARNING, "Missing message " + path);
                 MMOBuffs.getInst().getLogger().log(Level.WARNING, "Please add it to your language.yml or reset the file.");
                 hasWarned = true;
             }
@@ -56,8 +66,16 @@ public final class LanguageManager implements Reloadable {
             input = prefixValue + message;
         }
 
-        return resolver != null
-                ? MiniMessage.miniMessage().deserialize(input, resolver)
-                : MiniMessage.miniMessage().deserialize(input);
+        if (resolver == null) {
+            Component cached = messageCache.get(input);
+            if (cached != null) {
+                return cached;
+            }
+            Component parsed = MiniMessage.miniMessage().deserialize(input);
+            messageCache.put(input, parsed);
+            return parsed;
+        }
+
+        return MiniMessage.miniMessage().deserialize(input, resolver);
     }
 }

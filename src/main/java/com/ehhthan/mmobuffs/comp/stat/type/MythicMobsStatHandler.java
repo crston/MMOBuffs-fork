@@ -6,10 +6,7 @@ import com.ehhthan.mmobuffs.api.stat.StatKey;
 import com.ehhthan.mmobuffs.api.stat.StatValue;
 import com.ehhthan.mmobuffs.comp.stat.StatHandler;
 import io.lumine.mythic.bukkit.MythicBukkit;
-import io.lumine.mythic.core.skills.stats.StatExecutor;
-import io.lumine.mythic.core.skills.stats.StatModifierType;
-import io.lumine.mythic.core.skills.stats.StatRegistry;
-import io.lumine.mythic.core.skills.stats.StatType;
+import io.lumine.mythic.core.skills.stats.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,10 +14,8 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
-public final class MythicMobsStatHandler implements StatHandler<StatRegistry> {
-
+public class MythicMobsStatHandler implements StatHandler<StatRegistry> {
     private static final String NAMESPACE = "mythicmobs";
-    private static final StatExecutor EXECUTOR = MythicBukkit.inst().getStatManager();
 
     @Override
     public @NotNull String namespace() {
@@ -33,19 +28,11 @@ public final class MythicMobsStatHandler implements StatHandler<StatRegistry> {
     }
 
     @Override
-    public void add(@NotNull EffectHolder holder,
-                    @NotNull ActiveStatusEffect effect,
-                    @NotNull StatKey key,
-                    @NotNull StatValue value) {
+    public void add(@NotNull EffectHolder holder, @NotNull ActiveStatusEffect effect,
+                    @NotNull StatKey key, @NotNull StatValue value) {
         StatRegistry registry = adapt(holder);
-        if (registry == null) {
-            return;
-        }
-
-        Optional<StatType> optStat = EXECUTOR.getStat(key.getStat().toUpperCase(Locale.ROOT));
-        if (optStat.isEmpty()) {
-            return;
-        }
+        Optional<StatType> optStat = getExecutor().getStat(key.getStat().toUpperCase(Locale.ROOT));
+        if (registry == null || optStat.isEmpty()) return;
 
         double finalValue = switch (effect.getStatusEffect().getStackType()) {
             case NORMAL, CASCADING -> value.getValue() * effect.getStacks();
@@ -58,26 +45,28 @@ public final class MythicMobsStatHandler implements StatHandler<StatRegistry> {
     }
 
     @Override
-    public void remove(@NotNull EffectHolder holder,
-                       @NotNull StatKey key) {
+    public void remove(@NotNull EffectHolder holder, @NotNull StatKey key) {
         StatRegistry registry = adapt(holder);
-        if (registry == null) {
-            return;
-        }
-
-        Optional<StatType> optStat = EXECUTOR.getStat(key.getStat().toUpperCase(Locale.ROOT));
-        optStat.ifPresent(stat -> registry.removeValue(stat, MythicKey.of(key)));
+        Optional<StatType> optStat = getExecutor().getStat(key.getStat().toUpperCase(Locale.ROOT));
+        optStat.ifPresent(stat -> {
+            if (registry != null) {
+                registry.removeValue(stat, MythicKey.of(key));
+            }
+        });
     }
 
     @Override
-    public @NotNull String getValue(@NotNull EffectHolder holder,
-                                    @NotNull StatKey key) {
+    public @NotNull String getValue(@NotNull EffectHolder holder, @NotNull StatKey key) {
         StatRegistry registry = adapt(holder);
-        if (registry == null) {
-            return "0";
-        }
-        Optional<StatType> optStat = EXECUTOR.getStat(key.getStat().toUpperCase(Locale.ROOT));
-        return optStat.map(stat -> String.valueOf(registry.get(stat))).orElse("0");
+        Optional<StatType> optStat = getExecutor().getStat(key.getStat().toUpperCase(Locale.ROOT));
+        return optStat.map(stat -> {
+            assert registry != null;
+            return String.valueOf(registry.get(stat));
+        }).orElse("0");
+    }
+
+    private StatExecutor getExecutor() {
+        return MythicBukkit.inst().getStatManager();
     }
 
     private StatModifierType adaptModifier(StatValue.ValueType type) {
@@ -87,7 +76,7 @@ public final class MythicMobsStatHandler implements StatHandler<StatRegistry> {
         };
     }
 
-    private static final class MythicKey implements io.lumine.mythic.core.skills.stats.StatSource {
+    static class MythicKey implements StatSource {
         private final StatKey key;
 
         private MythicKey(StatKey key) {
@@ -105,13 +94,7 @@ public final class MythicMobsStatHandler implements StatHandler<StatRegistry> {
 
         @Override
         public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (!(obj instanceof MythicKey other)) {
-                return false;
-            }
-            return Objects.equals(this.key, other.key);
+            return this == obj || (obj instanceof MythicKey other && Objects.equals(this.key, other.key));
         }
 
         @Override

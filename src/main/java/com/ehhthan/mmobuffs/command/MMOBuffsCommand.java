@@ -19,12 +19,13 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 
 @CommandAlias("mmobuffs|mmobuff|buffs|buff")
 @Description("Main mmobuffs command.")
-public final class MMOBuffsCommand extends BaseCommand {
+public class MMOBuffsCommand extends BaseCommand {
+    private static final MiniMessage MM = MiniMessage.miniMessage();
 
     private final MMOBuffs plugin;
     private final LanguageManager lang;
@@ -51,16 +52,14 @@ public final class MMOBuffsCommand extends BaseCommand {
                      EffectHolder holder,
                      StatusEffect effect,
                      Integer duration,
-                     @Default("SET") Modifier durationMod,
-                     @Default("1") Integer stacks,
-                     @Default("KEEP") Modifier stackMod,
-                     @Default("") String silent) {
-
+                     Modifier durationMod,
+                     Integer stacks,
+                     Modifier stackMod,
+                     @Default String silent) {
         ActiveStatusEffect eff = ActiveStatusEffect.builder(effect)
                 .startDuration(duration)
                 .startStacks(stacks)
                 .build();
-
         holder.addEffect(eff, durationMod, stackMod);
         respond(sender, "give-effect", eff, holder, silent);
     }
@@ -72,16 +71,14 @@ public final class MMOBuffsCommand extends BaseCommand {
     public void perm(CommandSender sender,
                      EffectHolder holder,
                      StatusEffect effect,
-                     @Default("SET") Modifier durationMod,
-                     @Default("1") Integer stacks,
-                     @Default("KEEP") Modifier stackMod,
-                     @Default("") String silent) {
-
+                     Modifier durationMod,
+                     Integer stacks,
+                     Modifier stackMod,
+                     @Default String silent) {
         ActiveStatusEffect eff = ActiveStatusEffect.builder(effect)
                 .permanent(true)
                 .startStacks(stacks)
                 .build();
-
         holder.addEffect(eff, durationMod, stackMod);
         respond(sender, "give-effect-permanent", eff, holder, silent);
     }
@@ -89,81 +86,70 @@ public final class MMOBuffsCommand extends BaseCommand {
     @Subcommand("clear|remove")
     @CommandPermission("mmobuffs.clear")
     @Syntax("<player> <effect|all|permanent> [-s]")
-    public void clear(CommandSender sender,
-                      EffectHolder holder,
-                      String option,
-                      @Default("") String silent) {
-
+    public void clear(CommandSender sender, EffectHolder holder, String option, @Default String silent) {
         TagResolver.Single playerTag = Placeholder.component("player", holder.getPlayer().displayName());
         Component msg;
 
         switch (option.toLowerCase()) {
-            case "all": {
+            case "all" -> {
                 holder.removeEffects(false);
                 msg = lang.getMessage("clear-all-effects", true, playerTag);
-                break;
             }
-            case "permanent": {
+            case "permanent" -> {
                 holder.removeEffects(true);
                 msg = lang.getMessage("clear-permanent-effects", true, playerTag);
-                break;
             }
-            default: {
+            default -> {
                 NamespacedKey key = NamespacedKey.fromString(option, plugin);
                 if (key == null || !holder.hasEffect(key)) {
                     throw new InvalidCommandArgument("Invalid effect.");
                 }
                 ActiveStatusEffect eff = holder.getEffect(key);
                 holder.removeEffect(key);
-                TagResolver resolver = TagResolver.builder()
-                        .resolver(playerTag)
-                        .resolver(eff.getResolver())
-                        .build();
-                msg = lang.getMessage("clear-effect", true, resolver);
-                break;
+                msg = lang.getMessage(
+                        "clear-effect",
+                        true,
+                        TagResolver.builder()
+                                .resolver(playerTag)
+                                .resolver(eff.getResolver())
+                                .build()
+                );
             }
         }
 
-        if (!"-s".equalsIgnoreCase(silent) && msg != null) {
+        if (!"-s".equalsIgnoreCase(silent)) {
             send(msg, sender);
         }
     }
 
     @Subcommand("time")
     @CommandPermission("mmobuffs.time")
-    @Syntax("<player> <effect> <operation> <value> [-s]")
     public void time(CommandSender sender,
                      EffectHolder holder,
                      StatusEffect effect,
                      Operation op,
                      int value,
-                     @Default("") String silent) {
-
+                     @Default String silent) {
         ActiveStatusEffect eff = holder.getEffect(effect.getKey());
         if (eff == null) {
             throw new InvalidCommandArgument("Effect not found.");
         }
-
         eff.setDuration(op.apply(eff.getDuration(), value));
-        holder.updateEffect(effect.getKey());
         respond(sender, "time-effect", eff, holder, silent);
     }
 
     @Subcommand("stack")
     @CommandPermission("mmobuffs.stack")
-    @Syntax("<player> <effect> <operation> <value> [-s]")
     public void stack(CommandSender sender,
                       EffectHolder holder,
                       StatusEffect effect,
                       Operation op,
                       int value,
-                      @Default("") String silent) {
-
+                      @Default String silent) {
         ActiveStatusEffect eff = holder.getEffect(effect.getKey());
         if (eff == null) {
             throw new InvalidCommandArgument("Effect not found.");
         }
-
         eff.setStacks(op.apply(eff.getStacks(), value));
         holder.updateEffect(effect.getKey());
         respond(sender, "stack-effect", eff, holder, silent);
@@ -171,25 +157,26 @@ public final class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("list")
     @CommandPermission("mmobuffs.list")
-    public void list(CommandSender sender, @co.aikar.commands.annotation.Optional EffectHolder holder) {
+    public void list(CommandSender sender, @Optional EffectHolder holder) {
         if (holder == null) {
-            if (sender instanceof Player player && EffectHolder.has(player)) {
-                holder = EffectHolder.get(player);
+            if (sender instanceof Player p && EffectHolder.has(p)) {
+                holder = EffectHolder.get(p);
             } else {
                 throw new InvalidCommandArgument("No player specified.");
             }
         }
 
-        List<Component> lines = new LinkedList<>();
+        List<Component> lines = new ArrayList<>();
         Component header = lang.getMessage("list-display.header", false);
         if (header != null) {
             lines.add(header);
         }
 
         String template = lang.getString("list-display.effect-element");
+        String parsedTemplate = parser.parse(holder.getPlayer(), template);
+
         for (ActiveStatusEffect effect : holder.getEffects(true)) {
-            String parsed = parser.parse(holder.getPlayer(), template);
-            Component line = MiniMessage.miniMessage().deserialize(parsed, effect.getResolver());
+            Component line = MM.deserialize(parsedTemplate, effect.getResolver());
             lines.add(line);
         }
 
@@ -214,21 +201,19 @@ public final class MMOBuffsCommand extends BaseCommand {
         send(lang.getMessage("unknown-command"), sender);
     }
 
-    private void respond(CommandSender sender,
-                         String key,
-                         ActiveStatusEffect eff,
-                         EffectHolder holder,
-                         String silent) {
-
+    private void respond(CommandSender sender, String key, ActiveStatusEffect eff, EffectHolder holder, String silent) {
         if (!"-s".equalsIgnoreCase(silent)) {
-            TagResolver resolver = TagResolver.builder()
-                    .resolver(eff.getResolver())
-                    .resolver(Placeholder.component("player", holder.getPlayer().displayName()))
-                    .build();
-            Component msg = lang.getMessage(key, true, resolver);
-            if (msg != null) {
-                send(msg, sender);
-            }
+            send(
+                    lang.getMessage(
+                            key,
+                            true,
+                            TagResolver.builder()
+                                    .resolver(eff.getResolver())
+                                    .resolver(Placeholder.component("player", holder.getPlayer().displayName()))
+                                    .build()
+                    ),
+                    sender
+            );
         }
     }
 
@@ -238,24 +223,17 @@ public final class MMOBuffsCommand extends BaseCommand {
         }
     }
 
-    public enum Operation {
+    enum Operation {
         SET, ADD, SUB, MUL, DIV;
 
         public int apply(int cur, int val) {
-            switch (this) {
-                case SET:
-                    return val;
-                case ADD:
-                    return cur + val;
-                case SUB:
-                    return cur - val;
-                case MUL:
-                    return cur * val;
-                case DIV:
-                    return val == 0 ? cur : cur / val;
-                default:
-                    return cur;
-            }
+            return switch (this) {
+                case SET -> val;
+                case ADD -> cur + val;
+                case SUB -> cur - val;
+                case MUL -> cur * val;
+                case DIV -> (val == 0 ? cur : cur / val);
+            };
         }
     }
 }

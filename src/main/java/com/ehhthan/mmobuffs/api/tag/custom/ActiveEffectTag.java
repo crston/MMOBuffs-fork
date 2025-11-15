@@ -3,16 +3,13 @@ package com.ehhthan.mmobuffs.api.tag.custom;
 import com.ehhthan.mmobuffs.MMOBuffs;
 import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
 import com.ehhthan.mmobuffs.api.effect.StatusEffect;
-import com.ehhthan.mmobuffs.api.modifier.Modifier;
 import org.bukkit.NamespacedKey;
 import org.bukkit.persistence.PersistentDataAdapterContext;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.jetbrains.annotations.NotNull;
 
-import static com.ehhthan.mmobuffs.api.tag.CustomTagTypes.BOOLEAN;
-import static com.ehhthan.mmobuffs.api.tag.CustomTagTypes.INTEGER;
-import static com.ehhthan.mmobuffs.api.tag.CustomTagTypes.NAMESPACED_KEY;
+import static com.ehhthan.mmobuffs.api.tag.CustomTagTypes.*;
 import static com.ehhthan.mmobuffs.util.KeyUtil.key;
 
 public class ActiveEffectTag implements PersistentDataType<PersistentDataContainer, ActiveStatusEffect> {
@@ -53,14 +50,8 @@ public class ActiveEffectTag implements PersistentDataType<PersistentDataContain
 
     @Override
     public @NotNull ActiveStatusEffect fromPrimitive(@NotNull PersistentDataContainer container, @NotNull PersistentDataAdapterContext ctx) {
-        NamespacedKey key = container.get(EFFECT, NAMESPACED_KEY);
-        if (key == null) {
-            throw new IllegalStateException("Missing status effect key while loading ActiveStatusEffect");
-        }
-
-        StatusEffect status = MMOBuffs.getInst().getEffectManager().get(key);
-        if (status == null) throw new IllegalStateException("Unknown status effect while loading ActiveStatusEffect");
-
+        NamespacedKey statusKey = container.get(EFFECT, NAMESPACED_KEY);
+        StatusEffect status = MMOBuffs.getInst().getEffectManager().get(statusKey);
         return ActiveStatusEffect.builder(status)
                 .startDuration(container.getOrDefault(START_DURATION, INTEGER, container.getOrDefault(DURATION, INTEGER, 0)))
                 .startStacks(container.getOrDefault(START_STACKS, INTEGER, container.getOrDefault(STACKS, INTEGER, 1)))

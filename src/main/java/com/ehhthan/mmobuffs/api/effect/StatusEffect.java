@@ -19,9 +19,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
-public final class StatusEffect implements Keyed, Resolver {
-
-    private static final MiniMessage MINI = MiniMessage.miniMessage();
+public class StatusEffect implements Keyed, Resolver {
+    private static final MiniMessage MM = MiniMessage.miniMessage();
 
     private static final String DISPLAY_NAME = "display-name";
     private static final String DESCRIPTION = "description";
@@ -30,7 +29,6 @@ public final class StatusEffect implements Keyed, Resolver {
     private static final String DISPLAY = "display";
     private static final String STACK_TYPE = "stack-type";
     private static final String MAX_STACKS = "max-stacks";
-    private static final String DURATION = "duration";
 
     private final NamespacedKey key;
     private final Component name;
@@ -38,40 +36,29 @@ public final class StatusEffect implements Keyed, Resolver {
     private final Map<StatKey, StatValue> stats = new LinkedHashMap<>();
     private final Map<EffectOption, Boolean> options = new EnumMap<>(EffectOption.class);
     private final int maxStacks;
-    private final int duration;
     private final StackType stackType;
     private final Optional<EffectDisplay> display;
-    private final TagResolver resolver;
 
     public StatusEffect(@NotNull ConfigurationSection section) {
-        this.key = Optional.ofNullable(NamespacedKey.fromString(section.getName().toLowerCase(Locale.ROOT), MMOBuffs.getInst()))
-                .orElseThrow(() -> new IllegalArgumentException("Invalid key for StatusEffect section: " + section.getName()));
+        this.key = Optional.ofNullable(
+                        NamespacedKey.fromString(section.getName().toLowerCase(Locale.ROOT), MMOBuffs.getInst())
+                )
+                .orElseThrow(() -> new IllegalArgumentException("Invalid key for StatusEffect section " + section.getName()));
 
-        String defaultName = WordUtils.capitalize(key.getKey());
-        this.name = MINI.deserialize(section.getString(DISPLAY_NAME, defaultName));
+        this.name = MM.deserialize(
+                section.getString(DISPLAY_NAME, WordUtils.capitalize(key.getKey()))
+        );
 
-        this.description = MINI.deserialize(section.getString(DESCRIPTION, ""));
+        this.description = MM.deserialize(
+                section.getString(DESCRIPTION, "")
+        );
 
         loadStats(section.getConfigurationSection(STATS));
         loadOptions(section.getConfigurationSection(OPTIONS));
 
-        this.maxStacks = Math.max(1, section.getInt(MAX_STACKS, 1));
-        this.duration = Math.max(0, section.getInt(DURATION, 0));
+        this.maxStacks = section.getInt(MAX_STACKS, 1);
         this.stackType = parseStackType(section.getString(STACK_TYPE));
-
-        ConfigurationSection displaySection = section.getConfigurationSection(DISPLAY);
-        this.display = displaySection != null ? Optional.of(new EffectDisplay(displaySection)) : Optional.empty();
-
-        this.resolver = TagResolver.builder()
-                .resolver(Placeholder.parsed("max-stacks", String.valueOf(maxStacks)))
-                .resolver(Placeholder.component("name", name))
-                .resolver(Placeholder.component("description", description))
-                .resolver(Placeholder.parsed("stack-type", WordUtils.capitalize(stackType.name().toLowerCase(Locale.ROOT))))
-                .build();
-    }
-
-    public int getDuration() {
-        return duration;
+        this.display = Optional.ofNullable(section.getConfigurationSection(DISPLAY)).map(EffectDisplay::new);
     }
 
     private void loadStats(@Nullable ConfigurationSection section) {
@@ -88,10 +75,7 @@ public final class StatusEffect implements Keyed, Resolver {
             } else {
                 continue;
             }
-            String value = section.getString(stat);
-            if (value != null) {
-                stats.put(statKey, new StatValue(value));
-            }
+            stats.put(statKey, new StatValue(Objects.requireNonNull(section.getString(stat))));
         }
     }
 
@@ -105,11 +89,10 @@ public final class StatusEffect implements Keyed, Resolver {
     }
 
     private StackType parseStackType(@Nullable String type) {
-        if (type == null || type.isEmpty()) {
-            return StackType.NORMAL;
-        }
         try {
-            return StackType.valueOf(type.toUpperCase(Locale.ROOT));
+            return StackType.valueOf(
+                    Optional.ofNullable(type).orElse("NORMAL").toUpperCase(Locale.ROOT)
+            );
         } catch (IllegalArgumentException e) {
             return StackType.NORMAL;
         }
@@ -158,6 +141,14 @@ public final class StatusEffect implements Keyed, Resolver {
 
     @Override
     public TagResolver getResolver() {
-        return resolver;
+        return TagResolver.builder()
+                .resolver(Placeholder.parsed("max-stacks", String.valueOf(maxStacks)))
+                .resolver(Placeholder.component("name", name))
+                .resolver(Placeholder.component("description", description))
+                .resolver(Placeholder.parsed(
+                        "stack-type",
+                        WordUtils.capitalize(stackType.name().toLowerCase(Locale.ROOT))
+                ))
+                .build();
     }
 }

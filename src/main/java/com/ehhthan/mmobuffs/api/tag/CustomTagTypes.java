@@ -14,7 +14,6 @@ public final class CustomTagTypes {
     public static final PersistentDataType<String, NamespacedKey> NAMESPACED_KEY = new NamespacedKeyTag();
     public static final PersistentDataType<PersistentDataContainer, ActiveStatusEffect> ACTIVE_EFFECT = new ActiveEffectTag();
     public static final PersistentDataType<PersistentDataContainer[], ActiveStatusEffect[]> ACTIVE_EFFECTS = new ActiveEffectsTag();
-    public static final PersistentDataType<Integer, Integer> INTEGER = PersistentDataType.INTEGER;
 
     private CustomTagTypes() {
     }

@@ -2,12 +2,11 @@ package com.ehhthan.mmobuffs.api;
 
 import com.ehhthan.mmobuffs.MMOBuffs;
 import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
-import com.ehhthan.mmobuffs.api.effect.stack.StackType;
 import com.ehhthan.mmobuffs.api.modifier.Modifier;
 import com.ehhthan.mmobuffs.api.tag.CustomTagTypes;
 import net.kyori.adventure.bossbar.BossBar;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.ConfigurationSection;
@@ -19,50 +18,48 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 import static com.ehhthan.mmobuffs.util.KeyUtil.key;
 
-public final class EffectHolder implements PersistentDataHolder {
-
+public class EffectHolder implements PersistentDataHolder {
     private static final NamespacedKey EFFECTS = key("effects");
     private static final Map<Player, EffectHolder> DATA = new ConcurrentHashMap<>();
     private static final BossBar EMPTY_BAR = BossBar.bossBar(Component.empty(), 1, BossBar.Color.WHITE, BossBar.Overlay.PROGRESS);
 
+    private final MMOBuffs plugin;
     private final Player player;
     private final BossBar bossBar;
     private final Component separator;
     private final Map<NamespacedKey, ActiveStatusEffect> effects = new HashMap<>();
-    private final List<ActiveStatusEffect> displayableEffects = new ArrayList<>();
 
     private final boolean bossbarEnabled;
-    private final boolean displayWhenEmpty;
+    private final boolean bossbarDisplayWhenEmpty;
     private final boolean durationAscending;
     private final int bossbarUpdateTicks;
 
-    private boolean displayCacheInvalid = true;
-
     public EffectHolder(Player player) {
+        this.plugin = MMOBuffs.getInst();
         this.player = player;
 
-        FileConfiguration config = MMOBuffs.getInst().getConfig();
+        FileConfiguration config = plugin.getConfig();
         this.separator = Component.text(config.getString("bossbar-display.effect-separator", " "));
 
-        ConfigurationSection section = config.getConfigurationSection("bossbar-display");
         this.bossbarEnabled = config.getBoolean("bossbar-display.enabled", true);
-        this.displayWhenEmpty = config.getBoolean("bossbar-display.display-when-empty", false);
+        this.bossbarDisplayWhenEmpty = config.getBoolean("bossbar-display.display-when-empty", false);
         this.durationAscending = config.getBoolean("sorting.duration-ascending", true);
         this.bossbarUpdateTicks = config.getInt("bossbar-display.update-ticks", 20);
 
-        if (section != null && bossbarEnabled) {
-            BossBar.Color color = Objects.requireNonNull(BossBar.Color.NAMES.value(section.getString("color", "white")));
-            BossBar.Overlay overlay = Objects.requireNonNull(BossBar.Overlay.NAMES.value(section.getString("overlay", "progress")));
-            this.bossBar = BossBar.bossBar(Component.empty(), 1, color, overlay);
-        } else {
-            this.bossBar = EMPTY_BAR;
-        }
+        ConfigurationSection section = config.getConfigurationSection("bossbar-display");
+        this.bossBar = (section != null && bossbarEnabled)
+                ? BossBar.bossBar(
+                Component.empty(),
+                1,
+                Objects.requireNonNull(BossBar.Color.NAMES.value(section.getString("color", "white"))),
+                Objects.requireNonNull(BossBar.Overlay.NAMES.value(section.getString("overlay", "progress")))
+        )
+                : EMPTY_BAR;
 
-        if (bossbarEnabled && displayWhenEmpty) {
+        if (bossbarDisplayWhenEmpty && bossbarEnabled) {
             player.showBossBar(bossBar);
         }
 
@@ -71,90 +68,70 @@ public final class EffectHolder implements PersistentDataHolder {
     }
 
     private void runSchedulers() {
-        Bukkit.getScheduler().runTaskTimer(MMOBuffs.getInst(), () -> {
-            if (!player.isOnline()) {
-                return;
-            }
-
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             Iterator<ActiveStatusEffect> it = effects.values().iterator();
-            boolean changed = false;
-
             while (it.hasNext()) {
                 ActiveStatusEffect effect = it.next();
-                boolean active = effect.tick();
-
-                if (!active) {
-                    StackType stackType = effect.getStatusEffect().getStackType();
-
-                    if ((stackType == StackType.CASCADING || stackType == StackType.TIMESTACK) && effect.getStacks() > 1) {
-                        effect.setStacks(effect.getStacks() - 1);
-                        effect.setDuration(effect.getStatusEffect().getDuration());
-                        MMOBuffs.getInst().getStatManager().add(this, effect);
-                        changed = true;
-                        displayCacheInvalid = true;
-                        continue;
-                    }
-
-                    MMOBuffs.getInst().getStatManager().remove(this, effect);
+                if (!effect.isPermanent() && !effect.tick()) {
+                    plugin.getStatManager().remove(this, effect);
                     it.remove();
-                    changed = true;
-                    displayCacheInvalid = true;
                 }
             }
-
-            if (changed) {
-                save();
-            }
+            save();
         }, 1, 20);
 
-        Bukkit.getScheduler().runTaskTimer(MMOBuffs.getInst(), () -> {
-            if (!player.isOnline() || !bossbarEnabled) {
-                return;
+        Bukkit.getScheduler().runTaskTimer(plugin, this::updateBossbar, 2, bossbarUpdateTicks);
+    }
+
+    private void updateBossbar() {
+        if (!bossbarEnabled) {
+            return;
+        }
+
+        if (effects.isEmpty() && !bossbarDisplayWhenEmpty) {
+            player.hideBossBar(bossBar);
+            return;
+        }
+
+        List<ActiveStatusEffect> displayable = new ArrayList<>();
+        for (ActiveStatusEffect effect : effects.values()) {
+            if (effect.getStatusEffect().hasDisplay()) {
+                displayable.add(effect);
             }
+        }
 
-            if (effects.isEmpty()) {
-                if (displayWhenEmpty) {
-                    bossBar.name(Component.empty());
-                    player.showBossBar(bossBar);
-                } else {
-                    player.hideBossBar(bossBar);
-                }
-                return;
-            }
+        if (displayable.isEmpty() && !bossbarDisplayWhenEmpty) {
+            player.hideBossBar(bossBar);
+            return;
+        }
 
-            if (displayCacheInvalid) {
-                displayableEffects.clear();
-                for (ActiveStatusEffect effect : effects.values()) {
-                    if (effect.getStatusEffect().hasDisplay()) {
-                        displayableEffects.add(effect);
-                    }
-                }
-
-                displayableEffects.sort(Comparator.comparingInt(ActiveStatusEffect::getDuration));
-                if (!durationAscending) {
-                    Collections.reverse(displayableEffects);
-                }
-
-                displayCacheInvalid = false;
-            }
-
-            List<Component> components = new ArrayList<>();
-            for (ActiveStatusEffect effect : displayableEffects) {
-                effect.getStatusEffect().getDisplay()
-                        .map(display -> display.build(player, effect))
-                        .ifPresent(components::add);
-            }
-
-            if (!components.isEmpty()) {
-                bossBar.name(Component.join(JoinConfiguration.separator(separator), components));
-                player.showBossBar(bossBar);
-            } else if (displayWhenEmpty) {
-                bossBar.name(Component.empty());
-                player.showBossBar(bossBar);
+        if (!displayable.isEmpty()) {
+            if (durationAscending) {
+                displayable.sort(Comparator.comparingInt(ActiveStatusEffect::getDuration));
             } else {
-                player.hideBossBar(bossBar);
+                displayable.sort((a, b) -> Integer.compare(b.getDuration(), a.getDuration()));
             }
-        }, 2, Math.max(1, bossbarUpdateTicks));
+        }
+
+        TextComponent.Builder builder = Component.text();
+        for (int i = 0; i < displayable.size(); i++) {
+            if (i > 0) {
+                builder.append(separator);
+            }
+            ActiveStatusEffect effect = displayable.get(i);
+            builder.append(
+                    effect.getStatusEffect().getDisplay()
+                            .map(display -> display.build(player, effect))
+                            .orElse(Component.empty())
+            );
+        }
+
+        if (!displayable.isEmpty() || bossbarDisplayWhenEmpty) {
+            bossBar.name(builder.build());
+            player.showBossBar(bossBar);
+        } else {
+            player.hideBossBar(bossBar);
+        }
     }
 
     private void loadSavedEffects() {
@@ -162,11 +139,11 @@ public final class EffectHolder implements PersistentDataHolder {
         if (!container.has(EFFECTS, CustomTagTypes.ACTIVE_EFFECTS)) {
             return;
         }
-        ActiveStatusEffect[] stored = container.get(EFFECTS, CustomTagTypes.ACTIVE_EFFECTS);
-        if (stored == null || stored.length == 0) {
+        ActiveStatusEffect[] array = container.get(EFFECTS, CustomTagTypes.ACTIVE_EFFECTS);
+        if (array == null) {
             return;
         }
-        for (ActiveStatusEffect effect : stored) {
+        for (ActiveStatusEffect effect : array) {
             if (effect != null) {
                 addEffect(effect, Modifier.SET, Modifier.SET);
             }
@@ -175,38 +152,32 @@ public final class EffectHolder implements PersistentDataHolder {
 
     public void addEffect(ActiveStatusEffect effect, Modifier durationMod, Modifier stackMod) {
         NamespacedKey key = effect.getStatusEffect().getKey();
-        effects.merge(key, effect, (oldEff, newEff) -> oldEff.merge(newEff, durationMod, stackMod));
-        ActiveStatusEffect current = effects.get(key);
-        MMOBuffs.getInst().getStatManager().add(this, current);
-        displayCacheInvalid = true;
-        save();
+        ActiveStatusEffect merged = effects.merge(key, effect, (oldEff, newEff) -> oldEff.merge(newEff, durationMod, stackMod));
+        plugin.getStatManager().add(this, merged);
     }
 
     public void updateEffect(NamespacedKey key) {
         ActiveStatusEffect effect = effects.get(key);
         if (effect != null) {
-            MMOBuffs.getInst().getStatManager().add(this, effect);
-            displayCacheInvalid = true;
-            save();
+            plugin.getStatManager().add(this, effect);
         }
     }
 
     public void removeEffect(NamespacedKey key) {
-        if (!hasEffect(key)) {
+        ActiveStatusEffect removed = effects.remove(key);
+        if (removed == null) {
             return;
         }
-        ActiveStatusEffect effect = effects.remove(key);
-        if (effect != null) {
-            MMOBuffs.getInst().getStatManager().remove(this, effect);
-            displayCacheInvalid = true;
-            save();
-        }
+        plugin.getStatManager().remove(this, removed);
     }
 
     public void removeEffects(boolean includePermanent) {
-        Collection<ActiveStatusEffect> snapshot = getEffects(includePermanent);
-        for (ActiveStatusEffect effect : snapshot) {
-            removeEffect(effect.getStatusEffect().getKey());
+        List<NamespacedKey> keys = new ArrayList<>();
+        for (ActiveStatusEffect effect : getEffects(includePermanent)) {
+            keys.add(effect.getStatusEffect().getKey());
+        }
+        for (NamespacedKey key : keys) {
+            removeEffect(key);
         }
     }
 
@@ -222,9 +193,13 @@ public final class EffectHolder implements PersistentDataHolder {
         if (includePermanent) {
             return new ArrayList<>(effects.values());
         }
-        return effects.values().stream()
-                .filter(e -> !e.isPermanent())
-                .collect(Collectors.toList());
+        List<ActiveStatusEffect> list = new ArrayList<>();
+        for (ActiveStatusEffect effect : effects.values()) {
+            if (!effect.isPermanent()) {
+                list.add(effect);
+            }
+        }
+        return list;
     }
 
     public Player getPlayer() {
@@ -232,13 +207,11 @@ public final class EffectHolder implements PersistentDataHolder {
     }
 
     private void save() {
-        PersistentDataContainer container = getPersistentDataContainer();
-        if (effects.isEmpty()) {
-            container.remove(EFFECTS);
-        } else {
-            ActiveStatusEffect[] array = effects.values().toArray(new ActiveStatusEffect[0]);
-            container.set(EFFECTS, CustomTagTypes.ACTIVE_EFFECTS, array);
-        }
+        getPersistentDataContainer().set(
+                EFFECTS,
+                CustomTagTypes.ACTIVE_EFFECTS,
+                effects.values().toArray(new ActiveStatusEffect[0])
+        );
     }
 
     @Override
@@ -254,20 +227,15 @@ public final class EffectHolder implements PersistentDataHolder {
         return DATA.get(player);
     }
 
-    public static final class PlayerListener implements org.bukkit.event.Listener {
+    public static class PlayerListener implements org.bukkit.event.Listener {
         @org.bukkit.event.EventHandler
-        public void onJoin(org.bukkit.event.player.PlayerJoinEvent event) {
-            Player player = event.getPlayer();
-            DATA.put(player, new EffectHolder(player));
+        public void onJoin(org.bukkit.event.player.PlayerJoinEvent e) {
+            DATA.put(e.getPlayer(), new EffectHolder(e.getPlayer()));
         }
 
         @org.bukkit.event.EventHandler
-        public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
-            Player player = event.getPlayer();
-            EffectHolder holder = DATA.remove(player);
-            if (holder != null) {
-                holder.save();
-            }
+        public void onQuit(org.bukkit.event.player.PlayerQuitEvent e) {
+            DATA.remove(e.getPlayer());
         }
     }
 }

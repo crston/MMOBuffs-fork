@@ -8,26 +8,33 @@ import java.util.logging.Level;
 public abstract class Manager<T> {
     protected final String name = getClass().getSimpleName();
 
-    public String getName() {
+    public final String getName() {
         return name;
     }
 
     public abstract Collection<T> values();
+
     public abstract void clear();
+
     public abstract int size();
+
     public abstract void register(T property);
 
-    public void registerAll(Collection<T> properties) {
-        properties.forEach(this::register);
+    public final void registerAll(Collection<T> properties) {
+        for (T p : properties) {
+            register(p);
+        }
     }
 
     @SafeVarargs
     public final void registerAll(T... properties) {
-        for (T property : properties) register(property);
+        for (T p : properties) {
+            register(p);
+        }
     }
 
-    public void error(String key, Exception e) {
+    public final void error(String key, Exception e) {
         MMOBuffs.getInst().getLogger().log(Level.WARNING,
-                name + " Error: Could not load '" + key + "' -> " + e.getMessage());
+                name + " Error Could not load " + key + " -> " + e.getMessage());
     }
 }

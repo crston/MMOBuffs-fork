@@ -7,16 +7,17 @@ import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 import java.time.Duration;
-import java.util.LinkedList;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.function.Function;
 
-public final class TimedDisplay implements DurationDisplay {
+public class TimedDisplay implements DurationDisplay {
+    private static final TimeType[] TYPES = TimeType.values();
 
     private static final Function<Duration, Component> LONG_FORMAT = duration -> {
-        List<Component> parts = new LinkedList<>();
-        for (TimeType type : TimeType.values()) {
+        List<Component> parts = new ArrayList<>();
+        for (TimeType type : TYPES) {
             Component part = type.format(duration);
             if (!part.equals(Component.empty())) {
                 parts.add(part);
@@ -35,7 +36,7 @@ public final class TimedDisplay implements DurationDisplay {
     };
 
     private static final Function<Duration, Component> SHORT_FORMAT = duration -> {
-        for (TimeType type : TimeType.values()) {
+        for (TimeType type : TYPES) {
             Component result = type.format(duration);
             if (!result.equals(Component.empty())) {
                 return result;
@@ -59,24 +60,16 @@ public final class TimedDisplay implements DurationDisplay {
 
     private enum TimeType {
         DAYS {
-            int extract(Duration d) {
-                return (int) d.toDaysPart();
-            }
+            int extract(Duration d) { return (int) d.toDaysPart(); }
         },
         HOURS {
-            int extract(Duration d) {
-                return d.toHoursPart();
-            }
+            int extract(Duration d) { return d.toHoursPart(); }
         },
         MINUTES {
-            int extract(Duration d) {
-                return d.toMinutesPart();
-            }
+            int extract(Duration d) { return d.toMinutesPart(); }
         },
         SECONDS {
-            int extract(Duration d) {
-                return d.toSecondsPart();
-            }
+            int extract(Duration d) { return d.toSecondsPart(); }
         };
 
         private final String id = name().toLowerCase(Locale.ROOT);
@@ -85,14 +78,13 @@ public final class TimedDisplay implements DurationDisplay {
 
         Component format(Duration duration) {
             int value = extract(duration);
-            if (value <= 0) {
-                return Component.empty();
-            }
-            return MMOBuffs.getInst().getLanguageManager().getMessage(
+            return value > 0
+                    ? MMOBuffs.getInst().getLanguageManager().getMessage(
                     "duration-display." + id,
                     false,
                     Placeholder.parsed("value", String.valueOf(value))
-            );
+            )
+                    : Component.empty();
         }
     }
 }

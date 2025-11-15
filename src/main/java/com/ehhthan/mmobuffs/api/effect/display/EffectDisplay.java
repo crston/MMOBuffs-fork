@@ -13,14 +13,21 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-public final class EffectDisplay {
+public class EffectDisplay {
+    private static final MiniMessage MM = MiniMessage.miniMessage();
 
     private final String icon;
     private final String text;
+    private final boolean useFont;
+    private final String fontKey;
 
     public EffectDisplay(@NotNull ConfigurationSection section) {
-        this.icon = section.getString("icon", "");
-        this.text = section.getString("text", "<icon> <duration>");
+        this.icon = StringEscapeUtils.unescapeJava(section.getString("icon", ""));
+        this.text = StringEscapeUtils.unescapeJava(section.getString("text", "<icon> <duration>"));
+
+        FileConfiguration config = MMOBuffs.getInst().getConfig();
+        this.useFont = config.getBoolean("resource-pack.enabled");
+        this.fontKey = config.getString("resource-pack.font", "mmobuffs:default");
     }
 
     public String getIcon() {
@@ -32,22 +39,16 @@ public final class EffectDisplay {
     }
 
     public Component build(@NotNull Player player, @NotNull ActiveStatusEffect effect) {
-        String parsedIcon = StringEscapeUtils.unescapeJava(icon);
-        String parsedText = StringEscapeUtils.unescapeJava(text);
-
         TagResolver resolver = TagResolver.builder()
                 .resolver(effect.getResolver())
-                .resolver(Placeholder.parsed("icon", parsedIcon))
+                .resolver(Placeholder.parsed("icon", icon))
                 .build();
 
-        String parsedWithPlaceholders = MMOBuffs.getInst().getParserManager().parse(player, parsedText);
+        String parsed = MMOBuffs.getInst().getParserManager().parse(player, text);
+        Component component = MM.deserialize(parsed, resolver);
 
-        Component component = MiniMessage.miniMessage().deserialize(parsedWithPlaceholders, resolver);
-
-        FileConfiguration config = MMOBuffs.getInst().getConfig();
-        if (config.getBoolean("resource-pack.enabled")) {
-            String font = config.getString("resource-pack.font", "mmobuffs:default");
-            component = component.style(component.style().font(Key.key(font)));
+        if (useFont) {
+            component = component.style(component.style().font(Key.key(fontKey)));
         }
 
         return component;

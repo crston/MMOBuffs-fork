@@ -1,26 +1,21 @@
 package com.ehhthan.mmobuffs.api.modifier;
 
 public enum Modifier {
-
     SET {
-        @Override public int apply(int cur, int val) { return val; }
+        @Override public int apply(int current, int value) { return value; }
     },
-
     ADD {
-        @Override public int apply(int cur, int val) { return cur + val; }
+        @Override public int apply(int current, int value) { return current + value; }
     },
-
     SUBTRACT {
-        @Override public int apply(int cur, int val) { return cur - val; }
+        @Override public int apply(int current, int value) { return current - value; }
     },
-
     REFRESH {
-        @Override public int apply(int cur, int val) { return cur >= val ? cur : val; }
+        @Override public int apply(int current, int value) { return Math.max(current, value); }
     },
-
     KEEP {
-        @Override public int apply(int cur, int val) { return cur; }
+        @Override public int apply(int current, int value) { return current; }
     };
 
-    public abstract int apply(int cur, int val);
+    public abstract int apply(int current, int value);
 }

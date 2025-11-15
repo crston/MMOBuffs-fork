@@ -18,10 +18,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-public final class AuraSkillsStatHandler implements StatHandler<SkillsUser> {
-
+public class AuraSkillsStatHandler implements StatHandler<SkillsUser> {
     private static final String NAMESPACE = "auraskills";
-    private static final AuraSkillsApi API = AuraSkillsApi.get();
 
     @Override
     public @NotNull String namespace() {
@@ -31,7 +29,7 @@ public final class AuraSkillsStatHandler implements StatHandler<SkillsUser> {
     @Override
     public @Nullable SkillsUser adapt(@NotNull EffectHolder holder) {
         UUID uuid = holder.getPlayer().getUniqueId();
-        return API.getUserManager().getUser(uuid);
+        return AuraSkillsApi.get().getUserManager().getUser(uuid);
     }
 
     @Override
@@ -40,54 +38,42 @@ public final class AuraSkillsStatHandler implements StatHandler<SkillsUser> {
                     @NotNull StatKey key,
                     @NotNull StatValue value) {
         SkillsUser user = adapt(holder);
-        if (user == null) {
-            return;
-        }
+        if (user == null) return;
 
         double modified = switch (effect.getStatusEffect().getStackType()) {
             case NORMAL, CASCADING -> value.getValue() * effect.getStacks();
             default -> value.getValue();
         };
 
-        GlobalRegistry reg = API.getGlobalRegistry();
+        GlobalRegistry reg = AuraSkillsApi.get().getGlobalRegistry();
         NamespacedId id = NamespacedId.of(NAMESPACE, key.getStat());
         Stat stat = reg.getStat(id);
-        if (stat == null) {
-            return;
+        if (stat != null) {
+            StatModifier modifier = new StatModifier(
+                    key.toString(), stat, modified, StatModifier.Operation.ADD
+            );
+            user.addStatModifier(modifier);
         }
-
-        StatModifier modifier = new StatModifier(
-                key.toString(),
-                stat,
-                modified,
-                StatModifier.Operation.ADD
-        );
-        user.addStatModifier(modifier);
     }
 
     @Override
     public void remove(@NotNull EffectHolder holder,
                        @NotNull StatKey key) {
         SkillsUser user = adapt(holder);
-        if (user == null) {
-            return;
+        if (user != null) {
+            user.removeStatModifier(key.toString());
         }
-        user.removeStatModifier(key.toString());
     }
 
     @Override
     public @NotNull String getValue(@NotNull EffectHolder holder,
                                     @NotNull StatKey key) {
         SkillsUser user = adapt(holder);
-        if (user == null) {
-            return "0";
-        }
+        if (user == null) return "0";
 
-        GlobalRegistry reg = API.getGlobalRegistry();
+        GlobalRegistry reg = AuraSkillsApi.get().getGlobalRegistry();
         Stat stat = reg.getStat(NamespacedId.of(NAMESPACE, key.getStat()));
-        if (stat == null) {
-            return "0";
-        }
+        if (stat == null) return "0";
 
         double level = user.getStatLevel(stat);
         return String.valueOf(level);

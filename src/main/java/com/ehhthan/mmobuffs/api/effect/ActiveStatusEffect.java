@@ -1,40 +1,25 @@
 package com.ehhthan.mmobuffs.api.effect;
 
-import com.ehhthan.mmobuffs.api.effect.display.duration.DurationDisplay;
-import com.ehhthan.mmobuffs.api.effect.display.duration.TimedDisplay;
 import com.ehhthan.mmobuffs.api.effect.stack.StackType;
 import com.ehhthan.mmobuffs.api.modifier.Modifier;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 
-public final class ActiveStatusEffect {
+public class ActiveStatusEffect {
 
     private final StatusEffect effect;
-    private final boolean permanent;
-
     private int duration;
     private int stacks;
+    private final boolean permanent;
 
-    private final DurationDisplay durationDisplay;
+    private TagResolver cachedResolver;
+    private boolean resolverDirty = true;
 
     private ActiveStatusEffect(StatusEffect effect, int duration, int stacks, boolean permanent) {
         this.effect = effect;
+        this.duration = duration;
+        this.stacks = stacks;
         this.permanent = permanent;
-
-        int baseStacks = stacks <= 0 ? 1 : stacks;
-        int maxStacks = effect.getMaxStacks();
-        if (maxStacks > 0 && baseStacks > maxStacks) {
-            baseStacks = maxStacks;
-        }
-        this.stacks = baseStacks;
-
-        this.duration = Math.max(0, duration);
-
-        if (permanent) {
-            this.durationDisplay = DurationDisplay.PERMANENT;
-        } else {
-            this.durationDisplay = new TimedDisplay(this);
-        }
     }
 
     public static Builder builder(StatusEffect effect) {
@@ -47,9 +32,7 @@ public final class ActiveStatusEffect {
         }
         if (duration > 0) {
             duration--;
-            if (duration < 0) {
-                duration = 0;
-            }
+            resolverDirty = true;
         }
         return duration > 0;
     }
@@ -59,49 +42,29 @@ public final class ActiveStatusEffect {
     }
 
     public ActiveStatusEffect merge(ActiveStatusEffect other, Modifier durationMod, Modifier stackMod) {
-        this.duration = Math.max(0, durationMod.apply(this.duration, other.duration));
-
-        int newStacks = stackMod.apply(this.stacks, other.stacks);
-        if (newStacks <= 0) {
-            newStacks = 1;
-        }
-        int maxStacks = effect.getMaxStacks();
-        if (maxStacks > 0 && newStacks > maxStacks) {
-            newStacks = maxStacks;
-        }
-        this.stacks = newStacks;
-
+        this.duration = durationMod.apply(this.duration, other.duration);
+        this.stacks = stackMod.apply(this.stacks, other.stacks);
+        this.resolverDirty = true;
         return this;
     }
 
     public void triggerStack(StackType type) {
-        if (effect.getStackType() != type) {
-            return;
-        }
-        int maxStacks = effect.getMaxStacks();
-        if (maxStacks <= 0) {
-            return;
-        }
-        if (stacks < maxStacks) {
+        if (effect.getStackType() == type && stacks < effect.getMaxStacks()) {
             stacks++;
-            if (stacks > maxStacks) {
-                stacks = maxStacks;
-            }
+            resolverDirty = true;
         }
     }
 
     public TagResolver getResolver() {
-        TagResolver base = effect.getResolver();
-
-        TagResolver dynamic = TagResolver.builder()
-                .resolver(Placeholder.component("duration", durationDisplay.display()))
-                .resolver(Placeholder.parsed("stacks", String.valueOf(stacks)))
-                .build();
-
-        return TagResolver.builder()
-                .resolver(base)
-                .resolver(dynamic)
-                .build();
+        if (cachedResolver == null || resolverDirty) {
+            cachedResolver = TagResolver.builder()
+                    .resolver(effect.getResolver())
+                    .resolver(Placeholder.parsed("duration", permanent ? "∞" : duration + "s"))
+                    .resolver(Placeholder.parsed("stacks", String.valueOf(stacks)))
+                    .build();
+            resolverDirty = false;
+        }
+        return cachedResolver;
     }
 
     public int getDuration() {
@@ -109,7 +72,8 @@ public final class ActiveStatusEffect {
     }
 
     public void setDuration(int duration) {
-        this.duration = Math.max(0, duration);
+        this.duration = duration;
+        this.resolverDirty = true;
     }
 
     public int getStacks() {
@@ -117,12 +81,8 @@ public final class ActiveStatusEffect {
     }
 
     public void setStacks(int stacks) {
-        int newStacks = stacks <= 0 ? 1 : stacks;
-        int maxStacks = effect.getMaxStacks();
-        if (maxStacks > 0 && newStacks > maxStacks) {
-            newStacks = maxStacks;
-        }
-        this.stacks = newStacks;
+        this.stacks = stacks;
+        this.resolverDirty = true;
     }
 
     public boolean isPermanent() {
@@ -137,20 +97,18 @@ public final class ActiveStatusEffect {
         if (permanent) {
             return "∞";
         }
-        int sec = duration;
-        if (sec <= 0) {
-            return "0s";
+
+        int total = duration;
+        int minutes = total / 60;
+        int seconds = total % 60;
+
+        if (minutes > 0) {
+            return minutes + "m " + seconds + "s";
         }
-        int m = sec / 60;
-        int s = sec % 60;
-        if (m > 0) {
-            return m + "m " + s + "s";
-        } else {
-            return s + "s";
-        }
+        return seconds + "s";
     }
 
-    public static final class Builder {
+    public static class Builder {
         private final StatusEffect effect;
         private int duration = 0;
         private int stacks = 1;

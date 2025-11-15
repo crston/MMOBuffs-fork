@@ -17,25 +17,29 @@ import com.ehhthan.mmobuffs.manager.type.StatManager;
 import org.bukkit.Bukkit;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Level;
 
 public final class MMOBuffs extends JavaPlugin {
 
     private static MMOBuffs INSTANCE;
 
-    private ParserManager parserManager;
+    private final ParserManager parserManager = new ParserManager();
     private ConfigManager configManager;
     private LanguageManager languageManager;
     private EffectManager effectManager;
     private StatManager statManager;
 
     public static MMOBuffs getInst() {
-        return Optional.ofNullable(INSTANCE)
-                .orElseThrow(() -> new IllegalStateException("MMOBuffs not initialized"));
+        MMOBuffs inst = INSTANCE;
+        if (inst == null) {
+            throw new IllegalStateException("MMOBuffs is not initialized yet.");
+        }
+        return inst;
     }
 
     @Override
@@ -44,62 +48,82 @@ public final class MMOBuffs extends JavaPlugin {
         saveDefaultConfig();
 
         int configVersion = getConfig().getInt("config-version", -1);
-        int defVer = Objects.requireNonNull(getConfig().getDefaults()).getInt("config-version", -1);
-
-        if (configVersion != defVer) {
-            getLogger().warning("Config version mismatch. Your version: " + configVersion + " expected: " + defVer);
+        int defConfigVersion = getConfig().getDefaults() != null
+                ? getConfig().getDefaults().getInt("config-version", -1)
+                : -1;
+        if (configVersion != defConfigVersion) {
+            getLogger().warning("You may be using an outdated config.yml (Your " + configVersion + " | Expected " + defConfigVersion + ")");
         }
 
-        parserManager = new ParserManager();
-        configManager = new ConfigManager(this);
-        languageManager = new LanguageManager();
-        effectManager = new EffectManager();
-        statManager = new StatManager(this);
+        this.configManager = new ConfigManager(this);
+        this.languageManager = new LanguageManager();
+        this.effectManager = new EffectManager();
+        this.statManager = new StatManager(this);
 
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             parserManager.register(new PlaceholderAPIParser());
             new MMOBuffsExpansion().register();
+            getLogger().log(Level.INFO, "PlaceholderAPI support detected.");
         }
 
         registerListeners();
         registerCommands();
     }
 
+    @Override
+    public void onDisable() {
+        INSTANCE = null;
+    }
+
     private void registerListeners() {
-        Bukkit.getPluginManager().registerEvents(new EffectHolder.PlayerListener(), this);
-        Bukkit.getPluginManager().registerEvents(new WorldListener(), this);
-        Bukkit.getPluginManager().registerEvents(new CombatListener(), this);
+        PluginManager pm = Bukkit.getPluginManager();
+        pm.registerEvents(new EffectHolder.PlayerListener(), this);
+        pm.registerEvents(new WorldListener(), this);
+        pm.registerEvents(new CombatListener(), this);
     }
 
     private void registerCommands() {
-        PaperCommandManager mgr = new PaperCommandManager(this);
+        PaperCommandManager commandManager = new PaperCommandManager(this);
 
-        mgr.getCommandCompletions().registerAsyncCompletion(
-                "effects",
-                c -> effectManager.keys().stream().map(NamespacedKey::getKey).collect(Collectors.toList())
-        );
+        commandManager.getCommandCompletions().registerAsyncCompletion("effects", c -> {
+            List<String> list = new ArrayList<>();
+            for (NamespacedKey key : effectManager.keys()) {
+                list.add(key.getKey());
+            }
+            return list;
+        });
 
-        mgr.getCommandContexts().registerContext(StatusEffect.class, c -> {
+        commandManager.getCommandContexts().registerContext(StatusEffect.class, c -> {
             String arg = c.getFirstArg();
-            if (arg == null) throw new InvalidCommandArgument("Missing effect");
+            if (arg == null) {
+                throw new InvalidCommandArgument("No status effect specified.");
+            }
+
             NamespacedKey key = NamespacedKey.fromString(arg, this);
-            if (key == null || !effectManager.has(key)) throw new InvalidCommandArgument("Invalid effect");
+            if (key == null || !effectManager.has(key)) {
+                throw new InvalidCommandArgument("Invalid status effect specified.");
+            }
+
             c.popFirstArg();
             return effectManager.get(key);
         });
 
-        mgr.getCommandContexts().registerContext(EffectHolder.class, c -> {
+        commandManager.getCommandContexts().registerContext(EffectHolder.class, c -> {
             String arg = c.getFirstArg();
-            if (arg == null) throw new InvalidCommandArgument("Missing player");
+            if (arg == null) {
+                throw new InvalidCommandArgument("No player specified.");
+            }
+
             Player player = Bukkit.getPlayer(arg);
             if (player == null || !EffectHolder.has(player)) {
-                throw new InvalidCommandArgument("Invalid effect holder");
+                throw new InvalidCommandArgument("Invalid effect holder specified.");
             }
+
             c.popFirstArg();
             return EffectHolder.get(player);
         });
 
-        mgr.registerCommand(new MMOBuffsCommand(this, languageManager, parserManager));
+        commandManager.registerCommand(new MMOBuffsCommand(this, languageManager, parserManager));
     }
 
     public void reload() {
