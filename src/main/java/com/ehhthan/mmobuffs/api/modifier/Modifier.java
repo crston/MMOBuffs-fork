@@ -1,24 +1,26 @@
 package com.ehhthan.mmobuffs.api.modifier;
 
-/**
- * Defines how a value (like duration or stacks) should be modified.
- */
 public enum Modifier {
+
     SET {
-        @Override public int apply(int current, int value) { return value; }
+        @Override public int apply(int cur, int val) { return val; }
     },
+
     ADD {
-        @Override public int apply(int current, int value) { return current + value; }
+        @Override public int apply(int cur, int val) { return cur + val; }
     },
+
     SUBTRACT {
-        @Override public int apply(int current, int value) { return current - value; }
+        @Override public int apply(int cur, int val) { return cur - val; }
     },
+
     REFRESH {
-        @Override public int apply(int current, int value) { return Math.max(current, value); }
+        @Override public int apply(int cur, int val) { return cur >= val ? cur : val; }
     },
+
     KEEP {
-        @Override public int apply(int current, int value) { return current; }
+        @Override public int apply(int cur, int val) { return cur; }
     };
 
-    public abstract int apply(int current, int value);
+    public abstract int apply(int cur, int val);
 }

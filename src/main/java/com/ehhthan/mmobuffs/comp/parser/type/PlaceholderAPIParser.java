@@ -5,11 +5,14 @@ import me.clip.placeholderapi.PlaceholderAPI;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-public class PlaceholderAPIParser implements Parser {
+public final class PlaceholderAPIParser implements Parser {
 
     @Override
     public @NotNull String parse(@NotNull Player player, @NotNull String text) {
-        return player.isOnline() ? PlaceholderAPI.setPlaceholders(player, text) : text;
+        if (!player.isOnline()) {
+            return text;
+        }
+        return PlaceholderAPI.setPlaceholders(player, text);
     }
 
     @Override

@@ -10,11 +10,9 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
-import java.util.EnumSet;
+public final class CombatListener implements Listener {
 
-public class CombatListener implements Listener {
-
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityDamageByEntity(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof Player victim) {
             trigger(victim, StackType.HURT, StackType.COMBAT);
@@ -24,7 +22,7 @@ public class CombatListener implements Listener {
         }
     }
 
-    @EventHandler(priority = EventPriority.MONITOR)
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onEntityDamageByBlock(EntityDamageByBlockEvent event) {
         if (event.getEntity() instanceof Player player) {
             trigger(player, StackType.HURT);
@@ -32,17 +30,32 @@ public class CombatListener implements Listener {
     }
 
     private void trigger(Player player, StackType... types) {
-        if (!EffectHolder.has(player)) return;
-        var holder = EffectHolder.get(player);
-        var validTypes = EnumSet.noneOf(StackType.class);
-        validTypes.addAll(java.util.Arrays.asList(types));
+        if (!EffectHolder.has(player)) {
+            return;
+        }
+
+        EffectHolder holder = EffectHolder.get(player);
+        if (holder == null) {
+            return;
+        }
 
         for (ActiveStatusEffect effect : holder.getEffects(true)) {
             StackType type = effect.getStatusEffect().getStackType();
-            if (validTypes.contains(type)) {
-                effect.triggerStack(type);
-                holder.updateEffect(effect.getStatusEffect().getKey());
+            boolean match = false;
+
+            for (StackType t : types) {
+                if (t == type) {
+                    match = true;
+                    break;
+                }
             }
+
+            if (!match) {
+                continue;
+            }
+
+            effect.triggerStack(type);
+            holder.updateEffect(effect.getStatusEffect().getKey());
         }
     }
 }

@@ -5,6 +5,7 @@ import net.kyori.adventure.text.Component;
 
 @FunctionalInterface
 public interface DurationDisplay {
+
     DurationDisplay PERMANENT = () ->
             MMOBuffs.getInst().getLanguageManager().getMessage("duration-display.permanent", false);
 

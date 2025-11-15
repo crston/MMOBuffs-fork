@@ -20,7 +20,7 @@ public class ActiveEffectsTag implements PersistentDataType<PersistentDataContai
     }
 
     @Override
-    public @NotNull PersistentDataContainer @NotNull [] toPrimitive(ActiveStatusEffect[] effects, @NotNull PersistentDataAdapterContext context) {
+    public @NotNull PersistentDataContainer[] toPrimitive(ActiveStatusEffect[] effects, @NotNull PersistentDataAdapterContext context) {
         PersistentDataContainer[] containers = new PersistentDataContainer[effects.length];
         for (int i = 0; i < effects.length; i++) {
             containers[i] = CustomTagTypes.ACTIVE_EFFECT.toPrimitive(effects[i], context);
@@ -29,7 +29,7 @@ public class ActiveEffectsTag implements PersistentDataType<PersistentDataContai
     }
 
     @Override
-    public @NotNull ActiveStatusEffect @NotNull [] fromPrimitive(PersistentDataContainer[] containers, @NotNull PersistentDataAdapterContext context) {
+    public @NotNull ActiveStatusEffect[] fromPrimitive(PersistentDataContainer[] containers, @NotNull PersistentDataAdapterContext context) {
         ActiveStatusEffect[] effects = new ActiveStatusEffect[containers.length];
         for (int i = 0; i < containers.length; i++) {
             try {

@@ -13,7 +13,8 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
-public class EffectDisplay {
+public final class EffectDisplay {
+
     private final String icon;
     private final String text;
 
@@ -39,9 +40,9 @@ public class EffectDisplay {
                 .resolver(Placeholder.parsed("icon", parsedIcon))
                 .build();
 
-        Component component = MiniMessage.miniMessage().deserialize(
-                MMOBuffs.getInst().getParserManager().parse(player, parsedText), resolver
-        );
+        String parsedWithPlaceholders = MMOBuffs.getInst().getParserManager().parse(player, parsedText);
+
+        Component component = MiniMessage.miniMessage().deserialize(parsedWithPlaceholders, resolver);
 
         FileConfiguration config = MMOBuffs.getInst().getConfig();
         if (config.getBoolean("resource-pack.enabled")) {

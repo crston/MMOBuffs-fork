@@ -1,5 +1,5 @@
 name: MMOBuffs
-version: '20250421-fork'
+version: 20251115fork
 main: com.ehhthan.mmobuffs.MMOBuffs
 api-version: 1.17
 softdepend: [PlaceholderAPI]

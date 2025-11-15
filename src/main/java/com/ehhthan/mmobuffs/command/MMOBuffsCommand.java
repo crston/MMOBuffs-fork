@@ -1,6 +1,7 @@
 package com.ehhthan.mmobuffs.command;
 
-import co.aikar.commands.*;
+import co.aikar.commands.BaseCommand;
+import co.aikar.commands.InvalidCommandArgument;
 import co.aikar.commands.annotation.*;
 import com.ehhthan.mmobuffs.MMOBuffs;
 import com.ehhthan.mmobuffs.api.EffectHolder;
@@ -17,12 +18,14 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.NamespacedKey;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+
 import java.util.LinkedList;
 import java.util.List;
 
 @CommandAlias("mmobuffs|mmobuff|buffs|buff")
 @Description("Main mmobuffs command.")
-public class MMOBuffsCommand extends BaseCommand {
+public final class MMOBuffsCommand extends BaseCommand {
+
     private final MMOBuffs plugin;
     private final LanguageManager lang;
     private final ParserManager parser;
@@ -44,10 +47,20 @@ public class MMOBuffsCommand extends BaseCommand {
     @CommandPermission("mmobuffs.give")
     @CommandCompletion("@players @effects @range:1-9 * @range:1-9 * -s")
     @Syntax("<player> <effect> <duration> [duration-modifier] [stacks] [stack-modifier] [-s]")
-    public void give(CommandSender sender, EffectHolder holder, StatusEffect effect, Integer duration,
-                     @Default("SET") Modifier durationMod, @Default("1") Integer stacks,
-                     @Default("KEEP") Modifier stackMod, @Default String silent) {
-        var eff = ActiveStatusEffect.builder(effect).startDuration(duration).startStacks(stacks).build();
+    public void give(CommandSender sender,
+                     EffectHolder holder,
+                     StatusEffect effect,
+                     Integer duration,
+                     @Default("SET") Modifier durationMod,
+                     @Default("1") Integer stacks,
+                     @Default("KEEP") Modifier stackMod,
+                     @Default("") String silent) {
+
+        ActiveStatusEffect eff = ActiveStatusEffect.builder(effect)
+                .startDuration(duration)
+                .startStacks(stacks)
+                .build();
+
         holder.addEffect(eff, durationMod, stackMod);
         respond(sender, "give-effect", eff, holder, silent);
     }
@@ -56,10 +69,19 @@ public class MMOBuffsCommand extends BaseCommand {
     @CommandPermission("mmobuffs.permanent")
     @CommandCompletion("@players @effects * @range:1-9 * -s")
     @Syntax("<player> <effect> [duration-modifier] [stacks] [stack-modifier] [-s]")
-    public void perm(CommandSender sender, EffectHolder holder, StatusEffect effect,
-                     @Default("REPLACE") Modifier durationMod, @Default("1") Integer stacks,
-                     @Default("KEEP") Modifier stackMod, @Default String silent) {
-        var eff = ActiveStatusEffect.builder(effect).permanent(true).startStacks(stacks).build();
+    public void perm(CommandSender sender,
+                     EffectHolder holder,
+                     StatusEffect effect,
+                     @Default("SET") Modifier durationMod,
+                     @Default("1") Integer stacks,
+                     @Default("KEEP") Modifier stackMod,
+                     @Default("") String silent) {
+
+        ActiveStatusEffect eff = ActiveStatusEffect.builder(effect)
+                .permanent(true)
+                .startStacks(stacks)
+                .build();
+
         holder.addEffect(eff, durationMod, stackMod);
         respond(sender, "give-effect-permanent", eff, holder, silent);
     }
@@ -67,45 +89,81 @@ public class MMOBuffsCommand extends BaseCommand {
     @Subcommand("clear|remove")
     @CommandPermission("mmobuffs.clear")
     @Syntax("<player> <effect|all|permanent> [-s]")
-    public void clear(CommandSender sender, EffectHolder holder, String option, @Default String silent) {
+    public void clear(CommandSender sender,
+                      EffectHolder holder,
+                      String option,
+                      @Default("") String silent) {
+
         TagResolver.Single playerTag = Placeholder.component("player", holder.getPlayer().displayName());
         Component msg;
 
         switch (option.toLowerCase()) {
-            case "all" -> {
+            case "all": {
                 holder.removeEffects(false);
                 msg = lang.getMessage("clear-all-effects", true, playerTag);
+                break;
             }
-            case "permanent" -> {
+            case "permanent": {
                 holder.removeEffects(true);
                 msg = lang.getMessage("clear-permanent-effects", true, playerTag);
+                break;
             }
-            default -> {
+            default: {
                 NamespacedKey key = NamespacedKey.fromString(option, plugin);
-                if (key == null || !holder.hasEffect(key)) throw new InvalidCommandArgument("Invalid effect.");
-                var eff = holder.getEffect(key);
+                if (key == null || !holder.hasEffect(key)) {
+                    throw new InvalidCommandArgument("Invalid effect.");
+                }
+                ActiveStatusEffect eff = holder.getEffect(key);
                 holder.removeEffect(key);
-                msg = lang.getMessage("clear-effect", true, TagResolver.builder().resolver(playerTag).resolver(eff.getResolver()).build());
+                TagResolver resolver = TagResolver.builder()
+                        .resolver(playerTag)
+                        .resolver(eff.getResolver())
+                        .build();
+                msg = lang.getMessage("clear-effect", true, resolver);
+                break;
             }
         }
 
-        if (!silent.equalsIgnoreCase("-s")) send(msg, sender);
+        if (!"-s".equalsIgnoreCase(silent) && msg != null) {
+            send(msg, sender);
+        }
     }
 
     @Subcommand("time")
     @CommandPermission("mmobuffs.time")
-    public void time(CommandSender sender, EffectHolder holder, StatusEffect effect, Operation op, int value, @Default String silent) {
-        var eff = holder.getEffect(effect.getKey());
-        if (eff == null) throw new InvalidCommandArgument("Effect not found.");
+    @Syntax("<player> <effect> <operation> <value> [-s]")
+    public void time(CommandSender sender,
+                     EffectHolder holder,
+                     StatusEffect effect,
+                     Operation op,
+                     int value,
+                     @Default("") String silent) {
+
+        ActiveStatusEffect eff = holder.getEffect(effect.getKey());
+        if (eff == null) {
+            throw new InvalidCommandArgument("Effect not found.");
+        }
+
         eff.setDuration(op.apply(eff.getDuration(), value));
+        holder.updateEffect(effect.getKey());
         respond(sender, "time-effect", eff, holder, silent);
     }
 
     @Subcommand("stack")
     @CommandPermission("mmobuffs.stack")
-    public void stack(CommandSender sender, EffectHolder holder, StatusEffect effect, Operation op, int value, @Default String silent) {
-        var eff = holder.getEffect(effect.getKey());
-        if (eff == null) throw new InvalidCommandArgument("Effect not found.");
+    @Syntax("<player> <effect> <operation> <value> [-s]")
+    public void stack(CommandSender sender,
+                      EffectHolder holder,
+                      StatusEffect effect,
+                      Operation op,
+                      int value,
+                      @Default("") String silent) {
+
+        ActiveStatusEffect eff = holder.getEffect(effect.getKey());
+        if (eff == null) {
+            throw new InvalidCommandArgument("Effect not found.");
+        }
+
         eff.setStacks(op.apply(eff.getStacks(), value));
         holder.updateEffect(effect.getKey());
         respond(sender, "stack-effect", eff, holder, silent);
@@ -113,32 +171,39 @@ public class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("list")
     @CommandPermission("mmobuffs.list")
-    public void list(CommandSender sender, @Optional EffectHolder holder) {
+    public void list(CommandSender sender, @co.aikar.commands.annotation.Optional EffectHolder holder) {
         if (holder == null) {
-            if (sender instanceof Player p && EffectHolder.has(p)) holder = EffectHolder.get(p);
-            else throw new InvalidCommandArgument("No player specified.");
+            if (sender instanceof Player player && EffectHolder.has(player)) {
+                holder = EffectHolder.get(player);
+            } else {
+                throw new InvalidCommandArgument("No player specified.");
+            }
         }
 
         List<Component> lines = new LinkedList<>();
         Component header = lang.getMessage("list-display.header", false);
-        if (header != null) lines.add(header);
+        if (header != null) {
+            lines.add(header);
+        }
 
         String template = lang.getString("list-display.effect-element");
-        for (var effect : holder.getEffects(true)) {
-            Component line = MiniMessage.miniMessage().deserialize(
-                    parser.parse(holder.getPlayer(), template),
-                    effect.getResolver()
-            );
-            if (line != null) lines.add(line);
+        for (ActiveStatusEffect effect : holder.getEffects(true)) {
+            String parsed = parser.parse(holder.getPlayer(), template);
+            Component line = MiniMessage.miniMessage().deserialize(parsed, effect.getResolver());
+            lines.add(line);
         }
 
         Component footer = lang.getMessage("list-display.footer", false);
-        if (footer != null) lines.add(footer);
+        if (footer != null) {
+            lines.add(footer);
+        }
 
         TextComponent.Builder builder = Component.text();
         for (int i = 0; i < lines.size(); i++) {
             builder.append(lines.get(i));
-            if (i < lines.size() - 1) builder.append(Component.newline());
+            if (i < lines.size() - 1) {
+                builder.append(Component.newline());
+            }
         }
 
         send(builder.build(), sender);
@@ -149,26 +214,48 @@ public class MMOBuffsCommand extends BaseCommand {
         send(lang.getMessage("unknown-command"), sender);
     }
 
-    private void respond(CommandSender sender, String key, ActiveStatusEffect eff, EffectHolder holder, String silent) {
-        if (!silent.equalsIgnoreCase("-s"))
-            send(lang.getMessage(key, true,
-                    TagResolver.builder().resolver(eff.getResolver()).resolver(Placeholder.component("player", holder.getPlayer().displayName())).build()), sender);
+    private void respond(CommandSender sender,
+                         String key,
+                         ActiveStatusEffect eff,
+                         EffectHolder holder,
+                         String silent) {
+
+        if (!"-s".equalsIgnoreCase(silent)) {
+            TagResolver resolver = TagResolver.builder()
+                    .resolver(eff.getResolver())
+                    .resolver(Placeholder.component("player", holder.getPlayer().displayName()))
+                    .build();
+            Component msg = lang.getMessage(key, true, resolver);
+            if (msg != null) {
+                send(msg, sender);
+            }
+        }
     }
 
     private void send(Component msg, CommandSender sender) {
-        if (msg != null) sender.sendMessage(msg);
+        if (msg != null) {
+            sender.sendMessage(msg);
+        }
     }
 
-    enum Operation {
+    public enum Operation {
         SET, ADD, SUB, MUL, DIV;
+
         public int apply(int cur, int val) {
-            return switch (this) {
-                case SET -> val;
-                case ADD -> cur + val;
-                case SUB -> cur - val;
-                case MUL -> cur * val;
-                case DIV -> (val == 0 ? cur : cur / val);
-            };
+            switch (this) {
+                case SET:
+                    return val;
+                case ADD:
+                    return cur + val;
+                case SUB:
+                    return cur - val;
+                case MUL:
+                    return cur * val;
+                case DIV:
+                    return val == 0 ? cur : cur / val;
+                default:
+                    return cur;
+            }
         }
     }
 }

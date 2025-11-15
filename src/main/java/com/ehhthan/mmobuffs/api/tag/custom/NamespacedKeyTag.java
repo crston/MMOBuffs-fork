@@ -25,8 +25,9 @@ public class NamespacedKeyTag implements PersistentDataType<String, NamespacedKe
     @Override
     public @NotNull NamespacedKey fromPrimitive(@NotNull String input, @NotNull PersistentDataAdapterContext context) {
         NamespacedKey key = NamespacedKey.fromString(input);
-        if (key == null)
+        if (key == null) {
             throw new IllegalArgumentException("Invalid NamespacedKey string: " + input);
+        }
         return key;
     }
 }

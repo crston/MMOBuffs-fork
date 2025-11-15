@@ -9,6 +9,7 @@ import java.util.Objects;
 import java.util.logging.Level;
 
 public final class ConfigManager {
+
     private final MMOBuffs plugin;
 
     public ConfigManager(MMOBuffs plugin) {
@@ -21,7 +22,7 @@ public final class ConfigManager {
 
     private void createDirectory(String path) {
         File folder = new File(plugin.getDataFolder(), path);
-        if (!folder.exists() && !folder.mkdir()) {
+        if (!folder.exists() && !folder.mkdirs()) {
             plugin.getLogger().log(Level.WARNING, "Could not create directory: " + path);
         }
     }
@@ -43,17 +44,26 @@ public final class ConfigManager {
 
         public void checkFile() {
             File file = getFile();
-            if (!file.exists()) {
-                try {
-                    Files.copy(Objects.requireNonNull(plugin.getResource("default/" + resourceName)), file.toPath());
-                } catch (IOException e) {
-                    plugin.getLogger().log(Level.SEVERE, "Failed to copy default file: " + resourceName, e);
-                }
+            if (file.exists()) {
+                return;
+            }
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                plugin.getLogger().log(Level.WARNING, "Could not create directory for file: " + file.getPath());
+                return;
+            }
+            try {
+                Files.copy(Objects.requireNonNull(plugin.getResource("default/" + resourceName)), file.toPath());
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to copy default file: " + resourceName, e);
             }
         }
 
         public File getFile() {
-            return new File(plugin.getDataFolder(), folderPath.isEmpty() ? fileName : folderPath + "/" + fileName);
+            if (folderPath.isEmpty()) {
+                return new File(plugin.getDataFolder(), fileName);
+            }
+            return new File(new File(plugin.getDataFolder(), folderPath), fileName);
         }
     }
 }

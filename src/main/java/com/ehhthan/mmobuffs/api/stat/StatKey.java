@@ -1,63 +1,59 @@
 package com.ehhthan.mmobuffs.api.stat;
 
 import com.ehhthan.mmobuffs.api.effect.StatusEffect;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.Locale;
-import java.util.Objects;
-import java.util.UUID;
+public final class StatKey {
 
-public class StatKey {
     private static final String NAMESPACE = "mmobuffs";
 
-    private final UUID uuid = UUID.randomUUID();
     private final StatusEffect effect;
     private final String stat;
     private final String plugin;
+    private final String cacheString;
 
-    public StatKey(@NotNull StatusEffect effect, @NotNull String stat) {
+    public StatKey(StatusEffect effect, String stat) {
         this(effect, stat, null);
     }
 
-    public StatKey(@NotNull StatusEffect effect, @NotNull String stat, @Nullable String plugin) {
-        this.effect = Objects.requireNonNull(effect);
-        this.stat = stat.toLowerCase(Locale.ROOT);
-        this.plugin = plugin != null ? plugin.toLowerCase(Locale.ROOT) : null;
+    public StatKey(StatusEffect effect, String stat, String plugin) {
+        this.effect = effect;
+        this.stat = stat.toLowerCase();
+        this.plugin = plugin == null ? null : plugin.toLowerCase();
+
+        String key = effect.getKey().getKey();
+        this.cacheString = NAMESPACE + "." + key + "." + this.stat;
     }
 
-    public @NotNull StatusEffect getEffect() {
+    public StatusEffect getEffect() {
         return effect;
     }
 
-    public @NotNull String getStat() {
+    public String getStat() {
         return stat;
     }
 
-    public @Nullable String getPlugin() {
+    public String getPlugin() {
         return plugin;
     }
 
-    public @NotNull UUID getUUID() {
-        return uuid;
-    }
-
     @Override
-    public @NotNull String toString() {
-        return NAMESPACE + '.' + effect.getKey().getKey() + '.' + stat;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof StatKey other)) return false;
-        return effect.equals(other.effect) &&
-                stat.equals(other.stat) &&
-                Objects.equals(plugin, other.plugin);
+    public String toString() {
+        return cacheString;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(effect, stat, plugin);
+        int h = effect.hashCode();
+        h = 31 * h + stat.hashCode();
+        return 31 * h + (plugin == null ? 0 : plugin.hashCode());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (!(obj instanceof StatKey other)) return false;
+        return effect.equals(other.effect)
+                && stat.equals(other.stat)
+                && (plugin == null ? other.plugin == null : plugin.equals(other.plugin));
     }
 }

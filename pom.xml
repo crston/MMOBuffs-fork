@@ -6,7 +6,7 @@
 
     <groupId>MMOBuffs</groupId>
     <artifactId>MMOBuffs</artifactId>
-    <version>20250624fork</version>
+    <version>20251115fork</version>
     <packaging>jar</packaging>
 
     <name>MMOBuffs</name>

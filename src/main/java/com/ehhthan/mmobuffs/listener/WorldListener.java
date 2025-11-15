@@ -1,6 +1,7 @@
 package com.ehhthan.mmobuffs.listener;
 
 import com.ehhthan.mmobuffs.api.EffectHolder;
+import com.ehhthan.mmobuffs.api.effect.ActiveStatusEffect;
 import com.ehhthan.mmobuffs.api.effect.option.EffectOption;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -9,7 +10,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 
-public class WorldListener implements Listener {
+public final class WorldListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onDeath(EntityDeathEvent event) {
@@ -24,14 +25,19 @@ public class WorldListener implements Listener {
     }
 
     private void removeByOption(Player player, EffectOption option) {
-        if (!EffectHolder.has(player)) return;
+        if (!EffectHolder.has(player)) {
+            return;
+        }
 
         EffectHolder holder = EffectHolder.get(player);
-        var toRemove = holder.getEffects(true).stream()
-                .filter(effect -> !effect.getStatusEffect().getOption(option))
-                .map(effect -> effect.getStatusEffect().getKey())
-                .toList();
+        if (holder == null) {
+            return;
+        }
 
-        toRemove.forEach(holder::removeEffect);
+        for (ActiveStatusEffect effect : holder.getEffects(true)) {
+            if (!effect.getStatusEffect().getOption(option)) {
+                holder.removeEffect(effect.getStatusEffect().getKey());
+            }
+        }
     }
 }
