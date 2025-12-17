@@ -46,7 +46,7 @@ public class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("give|add")
     @CommandPermission("mmobuffs.give")
-    @CommandCompletion("@players @effects @range:1-9 * @range:1-9 * -s")
+    @CommandCompletion("@players @effects @range:1-60 @nothing @range:1-5 @nothing -s")
     @Syntax("<player> <effect> <duration> [duration-modifier] [stacks] [stack-modifier] [-s]")
     public void give(CommandSender sender,
                      EffectHolder holder,
@@ -66,7 +66,7 @@ public class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("permanent|perm")
     @CommandPermission("mmobuffs.permanent")
-    @CommandCompletion("@players @effects * @range:1-9 * -s")
+    @CommandCompletion("@players @effects @nothing @range:1-5 @nothing -s")
     @Syntax("<player> <effect> [duration-modifier] [stacks] [stack-modifier] [-s]")
     public void perm(CommandSender sender,
                      EffectHolder holder,
@@ -85,6 +85,7 @@ public class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("clear|remove")
     @CommandPermission("mmobuffs.clear")
+    @CommandCompletion("@players @effects|all|permanent -s")
     @Syntax("<player> <effect|all|permanent> [-s]")
     public void clear(CommandSender sender, EffectHolder holder, String option, @Default String silent) {
         TagResolver.Single playerTag = Placeholder.component("player", holder.getPlayer().displayName());
@@ -124,6 +125,8 @@ public class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("time")
     @CommandPermission("mmobuffs.time")
+    @CommandCompletion("@players @effects SET|ADD|SUB|MUL|DIV @range:1-60 -s")
+    @Syntax("<player> <effect> <SET|ADD|SUB|MUL|DIV> <value> [-s]")
     public void time(CommandSender sender,
                      EffectHolder holder,
                      StatusEffect effect,
@@ -140,6 +143,8 @@ public class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("stack")
     @CommandPermission("mmobuffs.stack")
+    @CommandCompletion("@players @effects SET|ADD|SUB|MUL|DIV @range:1-5 -s")
+    @Syntax("<player> <effect> <SET|ADD|SUB|MUL|DIV> <value> [-s]")
     public void stack(CommandSender sender,
                       EffectHolder holder,
                       StatusEffect effect,
@@ -157,6 +162,7 @@ public class MMOBuffsCommand extends BaseCommand {
 
     @Subcommand("list")
     @CommandPermission("mmobuffs.list")
+    @CommandCompletion("@players")
     public void list(CommandSender sender, @Optional EffectHolder holder) {
         if (holder == null) {
             if (sender instanceof Player p && EffectHolder.has(p)) {

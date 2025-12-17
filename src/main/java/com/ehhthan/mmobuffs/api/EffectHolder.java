@@ -152,6 +152,7 @@ public class EffectHolder implements PersistentDataHolder {
 
     public void addEffect(ActiveStatusEffect effect, Modifier durationMod, Modifier stackMod) {
         NamespacedKey key = effect.getStatusEffect().getKey();
+        // StatManager.add handles the removal of existing stats before adding new ones
         ActiveStatusEffect merged = effects.merge(key, effect, (oldEff, newEff) -> oldEff.merge(newEff, durationMod, stackMod));
         plugin.getStatManager().add(this, merged);
     }
@@ -235,7 +236,13 @@ public class EffectHolder implements PersistentDataHolder {
 
         @org.bukkit.event.EventHandler
         public void onQuit(org.bukkit.event.player.PlayerQuitEvent e) {
-            DATA.remove(e.getPlayer());
+            Player player = e.getPlayer();
+            if (DATA.containsKey(player)) {
+                EffectHolder holder = DATA.get(player);
+                holder.save();
+                holder.removeEffects(true);
+                DATA.remove(player);
+            }
         }
     }
 }

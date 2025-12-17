@@ -35,10 +35,13 @@ public class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
         MMOPlayerData data = adapt(holder);
         if (data == null) return;
 
-        double amount = switch (effect.getStatusEffect().getStackType()) {
+        // 1. 스택 계산
+        double rawAmount = switch (effect.getStatusEffect().getStackType()) {
             case NORMAL, CASCADING -> value.getValue() * effect.getStacks();
             default -> value.getValue();
         };
+
+        double amount = round(rawAmount, 4);
 
         String stat = key.getStat().toUpperCase(Locale.ROOT);
         data.getStatMap().getInstance(stat).registerModifier(
@@ -77,5 +80,13 @@ public class MythicLibStatHandler implements StatHandler<MMOPlayerData> {
             case FLAT -> ModifierType.FLAT;
             case RELATIVE -> ModifierType.RELATIVE;
         };
+    }
+
+    private double round(double value, int places) {
+        if (places < 0) throw new IllegalArgumentException();
+        long factor = (long) Math.pow(10, places);
+        value = value * factor;
+        long tmp = Math.round(value);
+        return (double) tmp / factor;
     }
 }

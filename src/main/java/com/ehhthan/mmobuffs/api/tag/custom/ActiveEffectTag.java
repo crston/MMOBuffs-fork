@@ -52,8 +52,13 @@ public class ActiveEffectTag implements PersistentDataType<PersistentDataContain
     public @NotNull ActiveStatusEffect fromPrimitive(@NotNull PersistentDataContainer container, @NotNull PersistentDataAdapterContext ctx) {
         NamespacedKey statusKey = container.get(EFFECT, NAMESPACED_KEY);
         StatusEffect status = MMOBuffs.getInst().getEffectManager().get(statusKey);
+
+        int duration = container.has(DURATION, INTEGER)
+                ? container.get(DURATION, INTEGER)
+                : container.getOrDefault(START_DURATION, INTEGER, 0);
+
         return ActiveStatusEffect.builder(status)
-                .startDuration(container.getOrDefault(START_DURATION, INTEGER, container.getOrDefault(DURATION, INTEGER, 0)))
+                .startDuration(duration)
                 .startStacks(container.getOrDefault(START_STACKS, INTEGER, container.getOrDefault(STACKS, INTEGER, 1)))
                 .permanent(container.getOrDefault(PERMANENT, BOOLEAN, false))
                 .build();

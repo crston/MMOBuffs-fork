@@ -4,6 +4,7 @@ import com.ehhthan.mmobuffs.api.effect.StatusEffect;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
@@ -11,7 +12,7 @@ import java.util.UUID;
 public class StatKey {
     private static final String NAMESPACE = "mmobuffs";
 
-    private final UUID uuid = UUID.randomUUID();
+    private final UUID uuid;
     private final StatusEffect effect;
     private final String stat;
     private final String plugin;
@@ -24,6 +25,9 @@ public class StatKey {
         this.effect = Objects.requireNonNull(effect);
         this.stat = stat.toLowerCase(Locale.ROOT);
         this.plugin = plugin != null ? plugin.toLowerCase(Locale.ROOT) : null;
+
+        String keyString = toString();
+        this.uuid = UUID.nameUUIDFromBytes(keyString.getBytes(StandardCharsets.UTF_8));
     }
 
     public @NotNull StatusEffect getEffect() {
@@ -44,6 +48,9 @@ public class StatKey {
 
     @Override
     public @NotNull String toString() {
+        if (plugin != null) {
+            return NAMESPACE + '.' + effect.getKey().getKey() + '.' + plugin + '.' + stat;
+        }
         return NAMESPACE + '.' + effect.getKey().getKey() + '.' + stat;
     }
 

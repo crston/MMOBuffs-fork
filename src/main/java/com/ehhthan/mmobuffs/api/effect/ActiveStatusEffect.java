@@ -18,7 +18,7 @@ public class ActiveStatusEffect {
     private ActiveStatusEffect(StatusEffect effect, int duration, int stacks, boolean permanent) {
         this.effect = effect;
         this.duration = duration;
-        this.stacks = stacks;
+        this.stacks = Math.min(stacks, effect.getMaxStacks());
         this.permanent = permanent;
     }
 
@@ -43,7 +43,9 @@ public class ActiveStatusEffect {
 
     public ActiveStatusEffect merge(ActiveStatusEffect other, Modifier durationMod, Modifier stackMod) {
         this.duration = durationMod.apply(this.duration, other.duration);
-        this.stacks = stackMod.apply(this.stacks, other.stacks);
+        int newStacks = stackMod.apply(this.stacks, other.stacks);
+        this.stacks = Math.min(newStacks, effect.getMaxStacks());
+
         this.resolverDirty = true;
         return this;
     }
@@ -81,7 +83,7 @@ public class ActiveStatusEffect {
     }
 
     public void setStacks(int stacks) {
-        this.stacks = stacks;
+        this.stacks = Math.min(stacks, effect.getMaxStacks());
         this.resolverDirty = true;
     }
 

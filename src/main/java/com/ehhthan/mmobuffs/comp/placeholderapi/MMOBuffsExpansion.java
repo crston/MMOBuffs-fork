@@ -82,7 +82,6 @@ public class MMOBuffsExpansion extends PlaceholderExpansion {
                         : "0";
             }
             default -> {
-                // Example: value_damage_mystatus
                 String[] optionSplit = split[1].split("_", 2);
                 if (optionSplit.length != 2) return "0";
 

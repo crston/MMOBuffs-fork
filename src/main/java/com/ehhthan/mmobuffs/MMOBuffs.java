@@ -52,7 +52,7 @@ public final class MMOBuffs extends JavaPlugin {
                 ? getConfig().getDefaults().getInt("config-version", -1)
                 : -1;
         if (configVersion != defConfigVersion) {
-            getLogger().warning("You may be using an outdated config.yml (Your " + configVersion + " | Expected " + defConfigVersion + ")");
+            getLogger().warning("You may be using an outdated config.yml");
         }
 
         this.configManager = new ConfigManager(this);

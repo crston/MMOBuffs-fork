@@ -36,14 +36,14 @@ public class CombatListener implements Listener {
 
         EffectHolder holder = EffectHolder.get(player);
 
-        outer:
         for (ActiveStatusEffect effect : holder.getEffects(true)) {
             StackType type = effect.getStatusEffect().getStackType();
             for (StackType t : types) {
                 if (t == type) {
                     effect.triggerStack(type);
                     holder.updateEffect(effect.getStatusEffect().getKey());
-                    continue outer;
+                    // Fix: Break inner loop to continue checking next effect
+                    break;
                 }
             }
         }

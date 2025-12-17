@@ -55,6 +55,8 @@ public class StatManager {
             return;
         }
 
+        remove(holder, effect);
+
         Map<StatKey, com.ehhthan.mmobuffs.api.stat.StatValue> stats = effect.getStatusEffect().getStats();
         for (Map.Entry<StatKey, com.ehhthan.mmobuffs.api.stat.StatValue> entry : stats.entrySet()) {
             StatKey key = entry.getKey();

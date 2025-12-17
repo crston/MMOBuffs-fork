@@ -1,5 +1,5 @@
 name: MMOBuffs
-version: 20251115fork
+version: 20251210fork
 main: com.ehhthan.mmobuffs.MMOBuffs
 api-version: 1.19
 authors: [Ehhthan, fork - crston]
